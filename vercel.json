@@ -1,0 +1,8 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "env": {
+    "FRED_API_KEY": "@fred_api_key"
+  }
+}
