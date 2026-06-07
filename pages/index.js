@@ -16,46 +16,87 @@ function ChangeLabel({ value, small = false }) {
   );
 }
 
-// 뉴스: 실제 네이버 많이 본 뉴스 검색 쿼리 기반
+// ── 히트맵 종목 정의 ──────────────────────────────────
+const US_SECTORS = [
+  { sector: '반도체', items: [
+    { sym: 'NVDA', label: 'NVDA' }, { sym: 'AMD', label: 'AMD' },
+    { sym: 'AVGO', label: 'AVGO' }, { sym: 'QCOM', label: 'QCOM' },
+    { sym: 'MU', label: 'MU' }, { sym: 'INTC', label: 'INTC' },
+  ]},
+  { sector: '빅테크', items: [
+    { sym: 'AAPL', label: 'AAPL' }, { sym: 'MSFT', label: 'MSFT' },
+    { sym: 'GOOGL', label: 'GOOGL' }, { sym: 'META', label: 'META' },
+    { sym: 'AMZN', label: 'AMZN' }, { sym: 'TSLA', label: 'TSLA' },
+  ]},
+  { sector: '금융', items: [
+    { sym: 'JPM', label: 'JPM' }, { sym: 'BAC', label: 'BAC' },
+    { sym: 'GS', label: 'GS' }, { sym: 'V', label: 'V' },
+  ]},
+  { sector: '에너지/기타', items: [
+    { sym: 'XOM', label: 'XOM' }, { sym: 'BRK-B', label: 'BRK-B' },
+    { sym: 'UNH', label: 'UNH' }, { sym: 'WMT', label: 'WMT' },
+  ]},
+];
+
+const KR_ITEMS = [
+  { sym: 'KRX:005930', label: '삼성전자' },
+  { sym: 'KRX:000660', label: 'SK하이닉스' },
+  { sym: 'KRX:000270', label: '기아' },
+  { sym: 'KRX:005380', label: '현대차' },
+  { sym: 'KRX:035420', label: 'NAVER' },
+  { sym: 'KRX:051910', label: 'LG화학' },
+  { sym: 'KRX:006400', label: '삼성SDI' },
+  { sym: 'KRX:035720', label: '카카오' },
+  { sym: 'KRX:028260', label: '삼성물산' },
+  { sym: 'KRX:003670', label: '포스코홀딩스' },
+  { sym: 'KRX:096770', label: 'SK이노' },
+  { sym: 'KRX:066570', label: 'LG전자' },
+];
+
+function heatColor(chg) {
+  if (chg == null) return '#1e293b';
+  if (chg >= 3)  return '#065f46';
+  if (chg >= 2)  return '#047857';
+  if (chg >= 1)  return '#059669';
+  if (chg >= 0)  return '#10b981';
+  if (chg >= -1) return '#dc2626';
+  if (chg >= -2) return '#b91c1c';
+  if (chg >= -3) return '#991b1b';
+  return '#7f1d1d';
+}
+
+function HeatCell({ label, sym, chg, size = 'md' }) {
+  const bg = heatColor(chg);
+  const isLight = chg != null && chg >= 0;
+  const h = size === 'lg' ? 72 : size === 'sm' ? 44 : 56;
+  return (
+    <div style={{
+      background: bg, borderRadius: 6, height: h,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer', transition: 'filter 0.2s', padding: '4px 2px',
+      border: '1px solid rgba(255,255,255,0.05)',
+    }}
+      onClick={() => window.open(`https://finance.yahoo.com/quote/${sym.replace('KRX:', '')}`, '_blank')}
+      onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.2)'}
+      onMouseLeave={e => e.currentTarget.style.filter = 'brightness(1)'}
+    >
+      <span style={{ fontSize: size === 'sm' ? 9 : 11, fontWeight: 800, color: '#fff', fontFamily: 'monospace', lineHeight: 1.2 }}>{label}</span>
+      <span style={{ fontSize: size === 'sm' ? 8 : 10, fontWeight: 700, color: chg == null ? '#64748b' : 'rgba(255,255,255,0.9)', fontFamily: 'monospace', marginTop: 2 }}>
+        {chg == null ? '--' : `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`}
+      </span>
+    </div>
+  );
+}
+
 function buildNewsFeed(stock) {
   const soxDown = stock.soxChg != null && stock.soxChg <= -2;
   const nasdaqDown = stock.nasdaqChg != null && stock.nasdaqChg <= -2;
-
   return [
-    {
-      cat: '반도체/AI',
-      title: soxDown
-        ? `필반 ${stock.soxChg?.toFixed(1)}% 급락 — 삼성·하이닉스 외국인 수급 긴급 점검`
-        : `엔비디아 ${stock.nvda ? `$${stock.nvda.toFixed(1)}` : ''} — 반도체 섹터 수급 동향`,
-      provider: '네이버 금융 뉴스',
-      url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('삼성전자 SK하이닉스 반도체 오늘')}&sm=tab_opt&sort=1`,
-    },
-    {
-      cat: '미국증시',
-      title: nasdaqDown
-        ? `나스닥 ${stock.nasdaqChg?.toFixed(1)}% 하락 — 뉴욕증시 급락 원인 분석`
-        : `나스닥·S&P500 오늘 동향 — 뉴욕증시 실시간 분석`,
-      provider: '네이버 경제',
-      url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('뉴욕증시 나스닥 오늘')}&sm=tab_opt&sort=1`,
-    },
-    {
-      cat: '매크로/Fed',
-      title: `Fed 순유동성 동향 — TGA·RRP 변화와 위험자산 상관관계 점검`,
-      provider: '네이버 경제',
-      url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('연준 유동성 금리 채권')}&sm=tab_opt&sort=1`,
-    },
-    {
-      cat: '외환/환율',
-      title: `원달러 환율${stock.usdkrw ? ` ${stock.usdkrw.toFixed(0)}원` : ''} — 환율 방향성 및 외국인 자금 흐름`,
-      provider: '네이버 경제',
-      url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('원달러 환율 오늘')}&sm=tab_opt&sort=1`,
-    },
-    {
-      cat: '실시간 속보',
-      title: `글로벌 증시 실시간 속보 — 오늘의 주요 금융·경제 이슈`,
-      provider: '네이버 금융 속보',
-      url: `https://news.naver.com/breakingnews/section/101/259`,
-    },
+    { cat: '반도체/AI', title: soxDown ? `필반 ${stock.soxChg?.toFixed(1)}% 급락 — 삼성·하이닉스 외국인 수급 긴급 점검` : `엔비디아 ${stock.nvda ? `$${stock.nvda.toFixed(1)}` : ''} — 반도체 섹터 수급 동향`, provider: '네이버 금융 뉴스', url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('삼성전자 SK하이닉스 반도체 오늘')}&sort=1` },
+    { cat: '미국증시', title: nasdaqDown ? `나스닥 ${stock.nasdaqChg?.toFixed(1)}% 하락 — 뉴욕증시 급락 원인 분석` : `나스닥·S&P500 오늘 동향 — 뉴욕증시 실시간 분석`, provider: '네이버 경제', url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('뉴욕증시 나스닥 오늘')}&sort=1` },
+    { cat: '매크로/Fed', title: `Fed 순유동성 동향 — TGA·RRP 변화와 위험자산 상관관계 점검`, provider: '네이버 경제', url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('연준 유동성 금리 채권')}&sort=1` },
+    { cat: '외환/환율', title: `원달러 환율${stock.usdkrw ? ` ${stock.usdkrw.toFixed(0)}원` : ''} — 환율 방향성 및 외국인 자금 흐름`, provider: '네이버 경제', url: `https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('원달러 환율 오늘')}&sort=1` },
+    { cat: '실시간 속보', title: `글로벌 증시 실시간 속보 — 오늘의 주요 금융·경제 이슈`, provider: '네이버 금융 속보', url: `https://news.naver.com/breakingnews/section/101/259` },
   ];
 }
 
@@ -69,13 +110,7 @@ function buildApexConfig(color, seriesData, name) {
     colors: [color],
     fill: { type: 'gradient', gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.4, gradientToColors: ['transparent'], stops: [0, 100] } },
     series: [{ name, data: values }],
-    xaxis: {
-      categories,
-      labels: { style: { colors: '#527193', fontFamily: 'monospace', fontSize: '9px' }, rotate: 0, hideOverlappingLabels: true },
-      tickAmount: 5,
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-    },
+    xaxis: { categories, labels: { style: { colors: '#527193', fontFamily: 'monospace', fontSize: '9px' }, rotate: 0, hideOverlappingLabels: true }, tickAmount: 5, axisBorder: { show: false }, axisTicks: { show: false } },
     yaxis: { labels: { style: { colors: '#527193', fontFamily: 'monospace', fontSize: '10px' }, formatter: v => `$${v.toFixed(2)}T` } },
     theme: { mode: 'dark' },
     tooltip: { theme: 'dark', y: { formatter: v => `$${v.toFixed(3)}T` } },
@@ -107,6 +142,8 @@ export default function Dashboard() {
   const [syncTime, setSyncTime] = useState('대기 중...');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [heatUS, setHeatUS] = useState({});   // sym -> chg
+  const [heatKR, setHeatKR] = useState({});
   const chartsRef = useRef({});
   const chartsInitRef = useRef(false);
 
@@ -114,14 +151,9 @@ export default function Dashboard() {
 
   const fetchStock = useCallback(async () => {
     const [qqq, spy, soxx, nvda, samsung, hynix, usdkrw, uso] = await Promise.all([
-      fetchAV('QQQ'),
-      fetchAV('SPY'),
-      fetchAV('SOXX'),
-      fetchFH('NVDA'),
-      fetchFH('KRX:005930'),
-      fetchFH('KRX:000660'),
-      fetchAV('USDKRW'),
-      fetchAV('USO'),
+      fetchAV('QQQ'), fetchAV('SPY'), fetchAV('SOXX'),
+      fetchFH('NVDA'), fetchFH('KRX:005930'), fetchFH('KRX:000660'),
+      fetchAV('USDKRW'), fetchAV('USO'),
     ]);
     setStock({
       nasdaq: qqq?.price, nasdaqChg: qqq?.chg,
@@ -137,6 +169,21 @@ export default function Dashboard() {
     });
   }, []);
 
+  const fetchHeatmap = useCallback(async () => {
+    // 미국 히트맵: Finnhub 병렬
+    const allUS = US_SECTORS.flatMap(s => s.items);
+    const usResults = await Promise.all(allUS.map(i => fetchFH(i.sym)));
+    const usMap = {};
+    allUS.forEach((item, idx) => { usMap[item.sym] = usResults[idx]?.chg ?? null; });
+    setHeatUS(usMap);
+
+    // 한국 히트맵: Finnhub 병렬
+    const krResults = await Promise.all(KR_ITEMS.map(i => fetchFH(i.sym)));
+    const krMap = {};
+    KR_ITEMS.forEach((item, idx) => { krMap[item.sym] = krResults[idx]?.chg ?? null; });
+    setHeatKR(krMap);
+  }, []);
+
   const fetchLiquidity = useCallback(async () => {
     try {
       const r = await fetch('/api/liquidity');
@@ -147,22 +194,19 @@ export default function Dashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setSyncTime('동기화 중...');
-    await Promise.all([fetchStock(), fetchLiquidity()]);
+    await Promise.all([fetchStock(), fetchLiquidity(), fetchHeatmap()]);
     setSyncTime(new Date().toLocaleTimeString('ko-KR'));
     setLoading(false);
-  }, [fetchStock, fetchLiquidity]);
+  }, [fetchStock, fetchLiquidity, fetchHeatmap]);
 
   useEffect(() => { if (mounted) fetchAll(); }, [mounted, fetchAll]);
 
-  // 차트: mounted 후에만 렌더링
   useEffect(() => {
     if (!mounted || !liquidity?.series) return;
     let destroyed = false;
-
     const initCharts = async () => {
       const ApexCharts = (await import('apexcharts')).default;
       if (destroyed) return;
-
       const { series } = liquidity;
       const configs = [
         { id: 'chart-net', color: '#00e87a', data: series.net, name: '실질 순유동성' },
@@ -170,7 +214,6 @@ export default function Dashboard() {
         { id: 'chart-tga', color: '#2563eb', data: series.tga, name: 'TGA 잔고' },
         { id: 'chart-rrp', color: '#a855f7', data: series.rrp, name: 'RRP 역레포' },
       ];
-
       if (!chartsInitRef.current) {
         chartsInitRef.current = true;
         for (const cfg of configs) {
@@ -187,13 +230,10 @@ export default function Dashboard() {
         for (const cfg of configs) {
           const chart = chartsRef.current[cfg.id];
           if (!chart) continue;
-          try {
-            chart.updateSeries([{ data: cfg.data.map(d => d.y) }]);
-          } catch {}
+          try { chart.updateSeries([{ data: cfg.data.map(d => d.y) }]); } catch {}
         }
       }
     };
-
     initCharts();
     return () => { destroyed = true; };
   }, [mounted, liquidity]);
@@ -243,14 +283,10 @@ export default function Dashboard() {
             실시간 매크로 분석 브리핑
           </h2>
           <div style={{ background:'rgba(4,12,20,0.5)', borderRadius:8, padding:'10px 14px', border:'1px solid rgba(30,54,86,0.6)', fontSize:13, color:'#e2e8f0', fontWeight:500 }}>
-            {isRisk
-              ? `🚨 반도체 섹터 급락 리스크: 필반 ${s.soxChg?.toFixed(1)}% 하락. 고멀티플 기술주 중심 출회 강도 상승 중.`
-              : cur.netLiquidity != null
-                ? `📈 가용 순유동성 ${fmtT(cur.netLiquidity)} 유지. TGA ${fmtT(cur.tga)} / RRP ${fmtT(cur.rrp)} — Fed 유동성 공급 정상 궤도.`
-                : '📊 업데이트 버튼을 눌러 최신 데이터를 가져오세요.'}
+            {isRisk ? `🚨 반도체 섹터 급락 리스크: 필반 ${s.soxChg?.toFixed(1)}% 하락. 고멀티플 기술주 중심 출회 강도 상승 중.`
+              : cur.netLiquidity != null ? `📈 가용 순유동성 ${fmtT(cur.netLiquidity)} 유지. TGA ${fmtT(cur.tga)} / RRP ${fmtT(cur.rrp)} — Fed 유동성 공급 정상 궤도.`
+              : '📊 업데이트 버튼을 눌러 최신 데이터를 가져오세요.'}
           </div>
-
-          {/* 뉴스 */}
           <div style={{ marginTop:20, paddingTop:16, borderTop:'1px solid #1e293b' }}>
             <div style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', marginBottom:10, display:'flex', justifyContent:'space-between' }}>
               <span>📌 실시간 데이터 기반 주요 뉴스 검색</span>
@@ -301,21 +337,15 @@ export default function Dashboard() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:24 }}>
           <div className="card">
             <span style={{ fontSize:10, fontWeight:700, color:'#fb923c' }}>CBOE VIX (공포지수)</span>
-            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>
-              {s.vix?.toFixed(2) ?? '--'} <ChangeLabel value={s.vixChg} small />
-            </div>
+            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>{s.vix?.toFixed(2) ?? '--'} <ChangeLabel value={s.vixChg} small /></div>
           </div>
           <div className="card">
             <span style={{ fontSize:10, fontWeight:700, color:'#f59e0b' }}>국제유가 WTI (USO)</span>
-            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>
-              ${s.wti?.toFixed(2) ?? '--'} <ChangeLabel value={s.wtiChg} small />
-            </div>
+            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>${s.wti?.toFixed(2) ?? '--'} <ChangeLabel value={s.wtiChg} small /></div>
           </div>
           <div className="card">
             <span style={{ fontSize:10, fontWeight:700, color:'#2dd4bf' }}>원/달러 환율</span>
-            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>
-              ₩{s.usdkrw?.toFixed(1) ?? '--'} <ChangeLabel value={s.usdkrwChg} small />
-            </div>
+            <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>₩{s.usdkrw?.toFixed(1) ?? '--'} <ChangeLabel value={s.usdkrwChg} small /></div>
           </div>
         </div>
 
@@ -337,6 +367,48 @@ export default function Dashboard() {
                 <span style={{ fontSize:10, color:'#64748b', display:'block', marginBottom:2 }}>{item.label}</span>
                 <span style={{ fontSize:12, fontFamily:'monospace', fontWeight:700, color:item.color }}>{fmtT(item.val)}</span>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 미국 히트맵 ── */}
+        <div style={{ marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', margin:0 }}>🇺🇸 미국 섹터별 히트맵</h3>
+          <span style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>출처: Finnhub · 클릭 시 Yahoo Finance</span>
+        </div>
+        <div className="card" style={{ marginBottom:16 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {US_SECTORS.map(sec => (
+              <div key={sec.sector}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#475569', textTransform:'uppercase', marginBottom:6, letterSpacing:'0.05em' }}>{sec.sector}</div>
+                <div style={{ display:'grid', gridTemplateColumns:`repeat(${sec.items.length}, 1fr)`, gap:4 }}>
+                  {sec.items.map(item => (
+                    <HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatUS[item.sym]} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* 범례 */}
+          <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:12, paddingTop:10, borderTop:'1px solid #1e293b', justifyContent:'center' }}>
+            {[['#7f1d1d','-3%↓'], ['#991b1b','-3%'], ['#b91c1c','-2%'], ['#dc2626','-1%'], ['#10b981','+0%'], ['#059669','+1%'], ['#047857','+2%'], ['#065f46','+3%↑']].map(([c, l]) => (
+              <div key={l} style={{ display:'flex', alignItems:'center', gap:3 }}>
+                <div style={{ width:12, height:12, borderRadius:2, background:c }} />
+                <span style={{ fontSize:9, color:'#64748b', fontFamily:'monospace' }}>{l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 한국 히트맵 ── */}
+        <div style={{ marginBottom:14, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', margin:0 }}>🇰🇷 한국 코스피 대형주 히트맵</h3>
+          <span style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>출처: Finnhub</span>
+        </div>
+        <div className="card" style={{ marginBottom:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:4 }}>
+            {KR_ITEMS.map(item => (
+              <HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatKR[item.sym]} size="sm" />
             ))}
           </div>
         </div>
