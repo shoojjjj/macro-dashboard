@@ -1,6 +1,9 @@
-// pages/index.js
+// pages/index.js — 브라우저에서 직접 Alpha Vantage / Finnhub 호출
 import Head from 'next/head';
 import { useEffect, useRef, useState, useCallback } from 'react';
+
+const AV_KEY  = '2A80SRQOZJA059O4';
+const FH_KEY  = 'd8iabmhr01qm63bav7i0d8iabmhr01qm63bav7ig';
 
 const fmtT = (v) => v == null ? '--' : `$${v.toFixed(3)}T`;
 
@@ -26,17 +29,52 @@ function buildApexConfig(color, seriesData, name) {
   const categories = seriesData.map(d => (d.x || '').slice(5));
   const values = seriesData.map(d => d.y);
   return {
-    chart: { type: 'line', height: 160, toolbar: { show: false }, background: 'transparent', animations: { enabled: true, speed: 600 } },
-    grid: { strokeDashArray: 4, borderColor: '#14243b', padding: { top: 5, bottom: 5, left: 10, right: 10 } },
+    chart: { type: 'area', height: 160, toolbar: { show: false }, background: 'transparent', animations: { enabled: true, speed: 600 } },
+    grid: { strokeDashArray: 4, borderColor: '#14243b', padding: { top: 5, bottom: 5, left: 10, right: 15 } },
     stroke: { curve: 'smooth', width: 2.5 },
     colors: [color],
-    fill: { type: 'gradient', gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.5, gradientToColors: ['transparent'], stops: [0, 100] } },
+    fill: { type: 'gradient', gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.4, gradientToColors: ['transparent'], stops: [0, 100] } },
     series: [{ name, data: values }],
-    xaxis: { categories, labels: { style: { colors: '#527193', fontFamily: 'monospace', fontSize: '10px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    xaxis: {
+      categories,
+      labels: {
+        style: { colors: '#527193', fontFamily: 'monospace', fontSize: '9px' },
+        rotate: 0,
+        hideOverlappingLabels: true,
+        showDuplicates: false,
+      },
+      tickAmount: 5,
+      axisBorder: { show: false },
+      axisTicks: { show: false }
+    },
     yaxis: { labels: { style: { colors: '#527193', fontFamily: 'monospace', fontSize: '10px' }, formatter: v => `$${v.toFixed(2)}T` } },
     theme: { mode: 'dark' },
     tooltip: { theme: 'dark', y: { formatter: v => `$${v.toFixed(3)}T` } },
   };
+}
+
+// Alpha Vantage 호출 (브라우저에서 직접)
+async function fetchAV(sym) {
+  try {
+    const r = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${sym}&apikey=${AV_KEY}`);
+    const d = await r.json();
+    const q = d['Global Quote'];
+    if (!q || !q['05. price']) return null;
+    return {
+      price: parseFloat(q['05. price']),
+      chg: parseFloat(q['10. change percent'].replace('%', '')),
+    };
+  } catch { return null; }
+}
+
+// Finnhub 호출 (브라우저에서 직접)
+async function fetchFH(sym) {
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FH_KEY}`);
+    const d = await r.json();
+    if (!d.c || d.c === 0) return null;
+    return { price: d.c, chg: d.dp };
+  } catch { return null; }
 }
 
 export default function Dashboard() {
@@ -48,43 +86,66 @@ export default function Dashboard() {
   const chartsInitRef = useRef(false);
   const apexRef = useRef(null);
 
+  const fetchStock = useCallback(async () => {
+    // AV: 지수/ETF (순차 호출로 rate limit 방지)
+    const qqq  = await fetchAV('QQQ');
+    const spy  = await fetchAV('SPY');
+    const soxx = await fetchAV('SOXX');
+    const uso  = await fetchAV('USO');
+
+    // Finnhub: 개별 주식 (병렬)
+    const [nvda, samsung, hynix, usdkrw] = await Promise.all([
+      fetchFH('NVDA'),
+      fetchFH('KRX:005930'),
+      fetchFH('KRX:000660'),
+      fetchAV('USDKRW'),
+    ]);
+
+    setStock({
+      nasdaq: qqq?.price, nasdaqChg: qqq?.chg,
+      nasdaqFut: qqq?.price, nasdaqFutChg: qqq?.chg,
+      sp500: spy?.price, sp500Chg: spy?.chg,
+      sox: soxx?.price, soxChg: soxx?.chg,
+      nvda: nvda?.price, nvdaChg: nvda?.chg,
+      samsung: samsung?.price, samsungChg: samsung?.chg,
+      hynix: hynix?.price, hynixChg: hynix?.chg,
+      wti: uso?.price, wtiChg: uso?.chg,
+      usdkrw: usdkrw?.price, usdkrwChg: usdkrw?.chg,
+      vix: null, vixChg: null,
+      kospiFut: null, kospiFutChg: null,
+    });
+  }, []);
+
+  const fetchLiquidity = useCallback(async () => {
+    try {
+      const r = await fetch('/api/liquidity');
+      const d = await r.json();
+      setLiquidity(d);
+    } catch {}
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setSyncTime('동기화 중...');
-    try {
-      const [sRes, lRes] = await Promise.allSettled([
-        fetch('/api/stock').then(r => r.json()),
-        fetch('/api/liquidity').then(r => r.json()),
-      ]);
-      if (sRes.status === 'fulfilled') setStock(sRes.value);
-      if (lRes.status === 'fulfilled') setLiquidity(lRes.value);
-      setSyncTime(new Date().toLocaleTimeString('ko-KR'));
-    } catch {
-      setSyncTime('연동 실패');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await Promise.all([fetchStock(), fetchLiquidity()]);
+    setSyncTime(new Date().toLocaleTimeString('ko-KR'));
+    setLoading(false);
+  }, [fetchStock, fetchLiquidity]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   useEffect(() => {
     if (!liquidity?.series) return;
-
     const initCharts = async () => {
-      if (!apexRef.current) {
-        apexRef.current = (await import('apexcharts')).default;
-      }
+      if (!apexRef.current) apexRef.current = (await import('apexcharts')).default;
       const ApexCharts = apexRef.current;
       const { series } = liquidity;
-
       const configs = [
         { id: 'chart-net', color: '#00e87a', data: series.net, name: '실질 순유동성' },
         { id: 'chart-fed', color: '#ff4a5a', data: series.fed, name: 'Fed 총자산' },
         { id: 'chart-tga', color: '#2563eb', data: series.tga, name: 'TGA 잔고' },
         { id: 'chart-rrp', color: '#a855f7', data: series.rrp, name: 'RRP 역레포' },
       ];
-
       if (!chartsInitRef.current) {
         chartsInitRef.current = true;
         for (const cfg of configs) {
@@ -99,10 +160,10 @@ export default function Dashboard() {
           const chart = chartsRef.current[cfg.id];
           if (!chart) continue;
           chart.updateSeries([{ data: cfg.data.map(d => d.y) }]);
+          chart.updateOptions({ xaxis: { categories: cfg.data.map(d => (d.x||'').slice(5)) } });
         }
       }
     };
-
     initCharts();
   }, [liquidity]);
 
@@ -112,11 +173,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <Head>
-        <title>Macro Intelligence Dashboard</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-
+      <Head><title>Macro Intelligence Dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1.0" /></Head>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #040c14; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #cbd5e1; }
@@ -125,10 +182,7 @@ export default function Dashboard() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .apexcharts-tooltip { background: #111e31 !important; border: 1px solid #1e3656 !important; color: #fff !important; }
-        @media(max-width:640px){
-          .grid4{grid-template-columns:repeat(2,1fr)!important;}
-          .grid2{grid-template-columns:1fr!important;}
-        }
+        @media(max-width:640px){ .grid4{grid-template-columns:repeat(2,1fr)!important;} .grid2{grid-template-columns:1fr!important;} }
       `}</style>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: 16, paddingBottom: 80 }}>
@@ -136,16 +190,14 @@ export default function Dashboard() {
         {/* 헤더 */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #1e293b', paddingBottom:20, marginBottom:24, flexWrap:'wrap', gap:12 }}>
           <div>
-            <h1 style={{ fontSize:18, fontWeight:900, color:'#fff', display:'flex', alignItems:'center', gap:8 }}>
-              📊 Macro & Stock Live Dashboard
-            </h1>
+            <h1 style={{ fontSize:18, fontWeight:900, color:'#fff', display:'flex', alignItems:'center', gap:8 }}>📊 Macro & Stock Live Dashboard</h1>
             <p style={{ fontSize:11, color:'#64748b', marginTop:4, fontFamily:'monospace' }}>
               최종 동기화: <span style={{ color:'#00e87a', fontWeight:700 }}>{syncTime}</span>
             </p>
           </div>
           <button onClick={fetchAll} disabled={loading}
             style={{ background: loading?'#1e3a5f':'#2563eb', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', fontSize:12, fontWeight:700, cursor: loading?'wait':'pointer', display:'flex', alignItems:'center', gap:6 }}>
-            <span style={loading ? { display:'inline-block', animation:'spin 1s linear infinite' } : {}}>↻</span>
+            <span style={loading?{display:'inline-block',animation:'spin 1s linear infinite'}:{}}> ↻ </span>
             실시간 데이터 업데이트
           </button>
         </div>
@@ -157,12 +209,9 @@ export default function Dashboard() {
             실시간 매크로 분석 브리핑
           </h2>
           <div style={{ background:'rgba(4,12,20,0.5)', borderRadius:8, padding:'10px 14px', border:'1px solid rgba(30,54,86,0.6)', fontSize:13, color:'#e2e8f0', fontWeight:500 }}>
-            {isRisk
-              ? '🚨 반도체 섹터 급락 리스크: 필반 지수 변동성 극대화. 고멀티플 기술주 중심 출회 강도 상승 중.'
-              : cur.netLiquidity != null
-                ? `📈 가용 순유동성 ${fmtT(cur.netLiquidity)} 유지. TGA ${fmtT(cur.tga)} / RRP ${fmtT(cur.rrp)} — Fed 유동성 공급 정상 궤도.`
-                : '📊 업데이트 버튼을 눌러 최신 데이터를 가져오세요.'
-            }
+            {isRisk ? '🚨 반도체 섹터 급락 리스크: 필반 지수 변동성 극대화. 고멀티플 기술주 중심 출회 강도 상승 중.'
+              : cur.netLiquidity != null ? `📈 가용 순유동성 ${fmtT(cur.netLiquidity)} 유지. TGA ${fmtT(cur.tga)} / RRP ${fmtT(cur.rrp)} — Fed 유동성 공급 정상 궤도.`
+              : '📊 업데이트 버튼을 눌러 최신 데이터를 가져오세요.'}
           </div>
           <div style={{ marginTop:20, paddingTop:16, borderTop:'1px solid #1e293b' }}>
             <div style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', marginBottom:10, display:'flex', justifyContent:'space-between' }}>
@@ -187,13 +236,13 @@ export default function Dashboard() {
         {/* 마켓 티커 */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
           <h2 style={{ fontSize:11, fontWeight:700, color:'#64748b', letterSpacing:'0.1em', textTransform:'uppercase', margin:0 }}>🌐 LIVE MARKET TICKER</h2>
-          <span style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>출처: Yahoo Finance</span>
+          <span style={{ fontSize:10, color:'#475569', fontFamily:'monospace' }}>출처: Alpha Vantage / Finnhub</span>
         </div>
         <div className="grid4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:24 }}>
           {[
-            { label:'나스닥 종합', val:s.nasdaq, chg:s.nasdaqChg },
+            { label:'나스닥100 (QQQ)', val:s.nasdaq, chg:s.nasdaqChg },
             { label:'나스닥100 선물', val:s.nasdaqFut, chg:s.nasdaqFutChg },
-            { label:'S&P 500', val:s.sp500, chg:s.sp500Chg },
+            { label:'S&P 500 (SPY)', val:s.sp500, chg:s.sp500Chg },
             { label:'필라델피아 반도체', val:s.sox, chg:s.soxChg },
             { label:'KOSPI200 야간선물', val:s.kospiFut, chg:s.kospiFutChg },
             { label:'엔비디아 (NVDA)', val:s.nvda, chg:s.nvdaChg },
@@ -219,7 +268,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="card">
-            <span style={{ fontSize:10, fontWeight:700, color:'#f59e0b' }}>국제유가 (WTI)</span>
+            <span style={{ fontSize:10, fontWeight:700, color:'#f59e0b' }}>국제유가 WTI (USO)</span>
             <div style={{ fontSize:13, fontFamily:'monospace', fontWeight:700, color:'#fff', marginTop:4 }}>
               ${s.wti?.toFixed(2) ?? '--'} <ChangeLabel value={s.wtiChg} small />
             </div>
@@ -274,7 +323,6 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-
       </div>
     </>
   );
