@@ -7,9 +7,10 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "15.3.6",
+    "next": "15.3.4",
     "react": "^18",
     "react-dom": "^18",
-    "apexcharts": "^3.45.2"
+    "apexcharts": "^3.45.2",
+    "yahoo-finance2": "^2.13.3"
   }
 }
