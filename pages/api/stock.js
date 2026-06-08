@@ -1,3 +1,6 @@
+// yahoo-finance2 공식 문서 기준: require('yahoo-finance2').default
+const yahooFinance = require('yahoo-finance2').default;
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=60');
 
@@ -14,13 +17,9 @@ export default async function handler(req, res) {
   ];
 
   try {
-    // CJS require로 로드
-    const yf = require('yahoo-finance2');
-    const quoteFn = yf.default?.quote ?? yf.quote;
-    
-    const results = await quoteFn.call(yf.default ?? yf, symbols);
+    const results = await yahooFinance.quote(symbols);
     const arr = Array.isArray(results) ? results : [results];
-    
+
     const map = {};
     arr.forEach(r => {
       if (r?.symbol) map[r.symbol] = {
