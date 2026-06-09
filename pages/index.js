@@ -1,120 +1,185 @@
 import Head from 'next/head';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const fmtT = (v) => v == null ? '--' : `$${v.toFixed(3)}T`;
+// ── 네이버 금융 API (한국 주식/지수) ──────────────────
+// 브라우저에서 직접 호출, CORS 허용
+async function naverStock(code) {
+  try {
+    const r = await fetch(
+      `https://polling.finance.naver.com/api/realtime/domestic/stock/${code}`
+    );
+    const d = await r.json();
+    const item = d?.datas?.[0];
+    if (!item) return null;
+    return {
+      price: item.closePriceRaw ?? item.overMarketPriceInfo?.overPrice?.replace(/,/g,''),
+      chg: parseFloat(item.fluctuationsRatioRaw ?? item.fluctuationsRatio),
+      name: item.stockName,
+    };
+  } catch { return null; }
+}
 
-function ChangeLabel({ value, small = false }) {
-  if (value == null) return <span style={{ color:'#64748b', fontSize: small?10:11 }}>--</span>;
+async function naverIndex(code) {
+  // 코스피/코스닥 지수
+  try {
+    const r = await fetch(
+      `https://polling.finance.naver.com/api/realtime/domestic/index/${code}`
+    );
+    const d = await r.json();
+    const item = d?.datas?.[0];
+    if (!item) return null;
+    return {
+      price: parseFloat(item.closePrice?.replace(/,/g,'')),
+      chg: parseFloat(item.fluctuationsRatio),
+    };
+  } catch { return null; }
+}
+
+// ── Yahoo Finance v8/chart (미국 주식/지수) ────────────
+// 개별 종목 브라우저 직접 호출
+async function yahooChart(symbol) {
+  try {
+    const r = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`
+    );
+    const d = await r.json();
+    const meta = d?.chart?.result?.[0]?.meta;
+    if (!meta) return null;
+    const price = meta.regularMarketPrice;
+    const prev = meta.chartPreviousClose;
+    const chg = prev ? ((price - prev) / prev) * 100 : null;
+    return { price, chg };
+  } catch { return null; }
+}
+
+// ── 히트맵 종목 ────────────────────────────────────────
+const US_SECTORS = [
+  { sector:'반도체', items:[
+    {sym:'NVDA',label:'NVDA',mcap:3200},
+    {sym:'AVGO',label:'AVGO',mcap:900},
+    {sym:'AMD',label:'AMD',mcap:290},
+    {sym:'QCOM',label:'QCOM',mcap:190},
+    {sym:'MU',label:'MU',mcap:120},
+    {sym:'INTC',label:'INTC',mcap:90},
+  ]},
+  { sector:'빅테크', items:[
+    {sym:'AAPL',label:'AAPL',mcap:3100},
+    {sym:'MSFT',label:'MSFT',mcap:2900},
+    {sym:'AMZN',label:'AMZN',mcap:2200},
+    {sym:'GOOGL',label:'GOOGL',mcap:2100},
+    {sym:'META',label:'META',mcap:1600},
+    {sym:'TSLA',label:'TSLA',mcap:900},
+  ]},
+  { sector:'금융', items:[
+    {sym:'JPM',label:'JPM',mcap:720},
+    {sym:'V',label:'V',mcap:640},
+    {sym:'BAC',label:'BAC',mcap:350},
+    {sym:'GS',label:'GS',mcap:190},
+  ]},
+  { sector:'에너지/기타', items:[
+    {sym:'BRK-B',label:'BRK-B',mcap:1100},
+    {sym:'WMT',label:'WMT',mcap:780},
+    {sym:'UNH',label:'UNH',mcap:520},
+    {sym:'XOM',label:'XOM',mcap:480},
+  ]},
+];
+
+const KR_STOCKS = [
+  {code:'005930',label:'삼성전자',mcap:350},
+  {code:'000660',label:'SK하이닉스',mcap:120},
+  {code:'005380',label:'현대차',mcap:55},
+  {code:'000270',label:'기아',mcap:42},
+  {code:'035420',label:'NAVER',mcap:38},
+  {code:'051910',label:'LG화학',mcap:28},
+  {code:'006400',label:'삼성SDI',mcap:25},
+  {code:'003670',label:'포스코홀딩스',mcap:22},
+  {code:'028260',label:'삼성물산',mcap:20},
+  {code:'035720',label:'카카오',mcap:18},
+  {code:'096770',label:'SK이노',mcap:15},
+  {code:'066570',label:'LG전자',mcap:14},
+];
+
+// ── 유틸 ──────────────────────────────────────────────
+const fmtT = (v) => v == null ? '--' : `$${v.toFixed(3)}T`;
+const fmtP = (v, digits=2) => v == null ? '--' : v.toLocaleString('en-US', {maximumFractionDigits: digits});
+
+function ChangeLabel({ value, small=false }) {
+  if (value == null) return <span style={{color:'#64748b',fontSize:small?10:11}}>--</span>;
   const pos = value >= 0;
-  return <span style={{ color: pos?'#00e87a':'#ff4a5a', fontSize: small?10:11, fontFamily:'monospace', fontWeight:700 }}>
-    {pos ? '▲ +' : '▼ '}{Math.abs(value).toFixed(2)}%
+  return <span style={{color:pos?'#00e87a':'#ff4a5a',fontSize:small?10:11,fontFamily:'monospace',fontWeight:700}}>
+    {pos?'▲ +':'▼ '}{Math.abs(value).toFixed(2)}%
   </span>;
 }
 
-const US_SECTORS = [
-  { sector:'반도체', items:[
-    {sym:'NVDA',label:'NVDA',mcap:3200},{sym:'AVGO',label:'AVGO',mcap:900},
-    {sym:'AMD',label:'AMD',mcap:290},{sym:'QCOM',label:'QCOM',mcap:190},
-    {sym:'MU',label:'MU',mcap:120},{sym:'INTC',label:'INTC',mcap:90},
-  ]},
-  { sector:'빅테크', items:[
-    {sym:'AAPL',label:'AAPL',mcap:3100},{sym:'MSFT',label:'MSFT',mcap:2900},
-    {sym:'AMZN',label:'AMZN',mcap:2200},{sym:'GOOGL',label:'GOOGL',mcap:2100},
-    {sym:'META',label:'META',mcap:1600},{sym:'TSLA',label:'TSLA',mcap:900},
-  ]},
-  { sector:'금융', items:[
-    {sym:'JPM',label:'JPM',mcap:720},{sym:'V',label:'V',mcap:640},
-    {sym:'BAC',label:'BAC',mcap:350},{sym:'GS',label:'GS',mcap:190},
-  ]},
-  { sector:'에너지/기타', items:[
-    {sym:'BRK-B',label:'BRK-B',mcap:1100},{sym:'WMT',label:'WMT',mcap:780},
-    {sym:'UNH',label:'UNH',mcap:520},{sym:'XOM',label:'XOM',mcap:480},
-  ]},
-];
-
-const KR_ITEMS = [
-  {sym:'005930.KS',label:'삼성전자',mcap:350},
-  {sym:'000660.KS',label:'SK하이닉스',mcap:120},
-  {sym:'005380.KS',label:'현대차',mcap:55},
-  {sym:'000270.KS',label:'기아',mcap:42},
-  {sym:'035420.KS',label:'NAVER',mcap:38},
-  {sym:'051910.KS',label:'LG화학',mcap:28},
-  {sym:'006400.KS',label:'삼성SDI',mcap:25},
-  {sym:'003670.KS',label:'포스코홀딩스',mcap:22},
-  {sym:'028260.KS',label:'삼성물산',mcap:20},
-  {sym:'035720.KS',label:'카카오',mcap:18},
-  {sym:'096770.KS',label:'SK이노',mcap:15},
-  {sym:'066570.KS',label:'LG전자',mcap:14},
-];
-
 function heatColor(chg) {
-  if (chg == null) return '#1a2535';
-  if (chg >= 3)  return '#065f46';
-  if (chg >= 2)  return '#047857';
-  if (chg >= 1)  return '#059669';
-  if (chg >= 0)  return '#0d7a4e';
-  if (chg >= -1) return '#b91c1c';
-  if (chg >= -2) return '#991b1b';
-  if (chg >= -3) return '#7f1d1d';
+  if (chg==null) return '#1a2535';
+  if (chg>=3)  return '#065f46';
+  if (chg>=2)  return '#047857';
+  if (chg>=1)  return '#059669';
+  if (chg>=0)  return '#0d7a4e';
+  if (chg>=-1) return '#b91c1c';
+  if (chg>=-2) return '#991b1b';
+  if (chg>=-3) return '#7f1d1d';
   return '#6b1212';
 }
 
 function calcH(mcap, maxMcap, minH=40, maxH=88) {
-  return minH + ((mcap / maxMcap) * (maxH - minH));
+  return minH + (mcap/maxMcap)*(maxH-minH);
 }
 
-function HeatCell({ label, sym, chg, height=56 }) {
+function HeatCell({ label, sym, chg, height=56, onClick }) {
   return (
-    <div onClick={() => window.open(`https://finance.yahoo.com/quote/${sym}`, '_blank')}
-      onMouseEnter={e => e.currentTarget.style.filter='brightness(1.25)'}
-      onMouseLeave={e => e.currentTarget.style.filter='brightness(1)'}
-      style={{ background:heatColor(chg), borderRadius:6, height, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'filter 0.15s', border:'1px solid rgba(255,255,255,0.06)', padding:'2px 4px' }}>
-      <span style={{ fontSize:height>60?11:9, fontWeight:800, color:'#fff', fontFamily:'monospace', textAlign:'center', lineHeight:1.2 }}>{label}</span>
-      <span style={{ fontSize:height>60?10:8, fontWeight:700, color:'rgba(255,255,255,0.85)', fontFamily:'monospace', marginTop:2 }}>
-        {chg==null ? '--' : `${chg>=0?'+':''}${chg.toFixed(2)}%`}
+    <div onClick={onClick||(() => window.open(`https://finance.yahoo.com/quote/${sym}`,'_blank'))}
+      onMouseEnter={e=>e.currentTarget.style.filter='brightness(1.25)'}
+      onMouseLeave={e=>e.currentTarget.style.filter='brightness(1)'}
+      style={{background:heatColor(chg),borderRadius:6,height,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'filter 0.15s',border:'1px solid rgba(255,255,255,0.06)',padding:'2px 4px'}}>
+      <span style={{fontSize:height>60?11:9,fontWeight:800,color:'#fff',fontFamily:'monospace',textAlign:'center',lineHeight:1.2}}>{label}</span>
+      <span style={{fontSize:height>60?10:8,fontWeight:700,color:'rgba(255,255,255,0.85)',fontFamily:'monospace',marginTop:2}}>
+        {chg==null?'--':`${chg>=0?'+':''}${chg.toFixed(2)}%`}
       </span>
     </div>
   );
 }
 
 const CHART_DESC = {
-  net: { color:'#00e87a', label:'실질 가용 순유동성 추이',    desc:'Fed자산 − TGA − RRP = 시중에 실제로 풀린 돈. 수치가 높을수록 주식·위험자산 랠리에 유리.' },
-  fed: { color:'#ff4a5a', label:'Fed 총자산 (Balance Sheet)', desc:'연준이 보유한 국채·MBS 총합. 증가(QE) → 유동성↑ 주가 상승 압력. 감소(QT) → 유동성↓ 긴축.' },
-  tga: { color:'#2563eb', label:'TGA 재무부 일반계정 잔고',   desc:'정부 "통장 잔고". 감소 → 재정지출 확대 → 시중 유동성↑. 증가 → 돈이 시장에서 잠김.' },
-  rrp: { color:'#a855f7', label:'RRP 연준 역레포 잔고',       desc:'MMF가 연준에 맡긴 단기 예치금. 감소 → 그 돈이 시장으로 유입 → 유동성 공급 효과.' },
+  net:{color:'#00e87a',label:'실질 가용 순유동성 추이',    desc:'Fed자산 − TGA − RRP = 시중에 실제로 풀린 돈. 높을수록 주식·위험자산 랠리에 유리.'},
+  fed:{color:'#ff4a5a',label:'Fed 총자산 (Balance Sheet)',desc:'연준이 보유한 국채·MBS 총합. 증가(QE) → 유동성↑. 감소(QT) → 긴축.'},
+  tga:{color:'#2563eb',label:'TGA 재무부 일반계정 잔고',  desc:'정부 통장 잔고. 감소 → 재정지출 확대 → 시중 유동성↑. 증가 → 돈이 시장에서 잠김.'},
+  rrp:{color:'#a855f7',label:'RRP 연준 역레포 잔고',      desc:'MMF가 연준에 맡긴 단기 예치금. 감소 → 그 돈이 시장으로 유입 → 유동성 공급 효과.'},
 };
 
-function buildNewsFeed(stock) {
-  const soxDown = stock.soxChg != null && stock.soxChg <= -2;
-  const nasdaqDown = stock.nasdaqChg != null && stock.nasdaqChg <= -2;
+function buildNewsFeed(s) {
+  const soxDown = s.soxChg!=null && s.soxChg<=-2;
+  const nasdaqDown = s.nasdaqChg!=null && s.nasdaqChg<=-2;
   return [
-    { cat:'반도체/AI', title: soxDown?`필반 ${stock.soxChg?.toFixed(1)}% 급락 — 삼성·하이닉스 수급 점검`:`엔비디아 ${stock.nvda?`$${stock.nvda.toFixed(1)}`:''} — 반도체 섹터 수급 동향`, provider:'네이버 금융', url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('삼성전자 SK하이닉스 반도체 오늘')}&sort=1` },
-    { cat:'미국증시', title: nasdaqDown?`나스닥 ${stock.nasdaqChg?.toFixed(1)}% 하락 — 뉴욕증시 급락 분석`:`나스닥·S&P500 오늘 동향 — 뉴욕증시 실시간`, provider:'네이버 경제', url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('뉴욕증시 나스닥 오늘')}&sort=1` },
-    { cat:'매크로/Fed', title:`Fed 순유동성 동향 — TGA·RRP 변화와 위험자산 상관관계`, provider:'네이버 경제', url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('연준 유동성 금리 채권')}&sort=1` },
-    { cat:'외환/환율', title:`원달러 환율${stock.usdkrw?` ${stock.usdkrw.toFixed(0)}원`:''} — 환율 방향성 및 외국인 자금 흐름`, provider:'네이버 경제', url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('원달러 환율 오늘')}&sort=1` },
-    { cat:'실시간 속보', title:`글로벌 증시 실시간 속보 — 오늘의 주요 금융·경제 이슈`, provider:'네이버 금융 속보', url:`https://news.naver.com/breakingnews/section/101/259` },
+    {cat:'반도체/AI', title:soxDown?`필반 ${s.soxChg?.toFixed(1)}% 급락 — 삼성·하이닉스 수급 점검`:`엔비디아 ${s.nvda?`$${s.nvda.toFixed(1)}`:''} — 반도체 섹터 수급 동향`, url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('삼성전자 SK하이닉스 반도체 오늘')}&sort=1`},
+    {cat:'미국증시', title:nasdaqDown?`나스닥 ${s.nasdaqChg?.toFixed(1)}% 하락 — 뉴욕증시 급락 분석`:`나스닥·S&P500 오늘 동향 — 뉴욕증시 실시간`, url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('뉴욕증시 나스닥 오늘')}&sort=1`},
+    {cat:'매크로/Fed', title:`Fed 순유동성 동향 — TGA·RRP 변화와 위험자산 상관관계`, url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('연준 유동성 금리 채권')}&sort=1`},
+    {cat:'외환/환율', title:`원달러 환율${s.usdkrw?` ${s.usdkrw.toFixed(0)}원`:''} — 환율 방향성 및 외국인 자금 흐름`, url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent('원달러 환율 오늘')}&sort=1`},
+    {cat:'실시간 속보', title:`글로벌 증시 실시간 속보 — 오늘의 주요 금융·경제 이슈`, url:`https://news.naver.com/breakingnews/section/101/259`},
   ];
 }
 
 function buildApexConfig(color, seriesData, name) {
   return {
-    chart: { type:'area', height:150, toolbar:{show:false}, background:'transparent', animations:{enabled:false} },
-    grid: { strokeDashArray:4, borderColor:'#14243b', padding:{top:5,bottom:5,left:10,right:15} },
-    stroke: { curve:'smooth', width:2.5 },
-    colors: [color],
-    fill: { type:'gradient', gradient:{shade:'dark',type:'vertical',shadeIntensity:0.4,gradientToColors:['transparent'],stops:[0,100]} },
-    series: [{ name, data: seriesData.map(d=>d.y) }],
-    xaxis: { categories: seriesData.map(d=>(d.x||'').slice(5)), labels:{style:{colors:'#527193',fontFamily:'monospace',fontSize:'9px'},rotate:0,hideOverlappingLabels:true}, tickAmount:5, axisBorder:{show:false}, axisTicks:{show:false} },
-    yaxis: { labels:{style:{colors:'#527193',fontFamily:'monospace',fontSize:'10px'},formatter:v=>`$${v.toFixed(2)}T`} },
-    theme: { mode:'dark' },
-    tooltip: { theme:'dark', y:{formatter:v=>`$${v.toFixed(3)}T`} },
-    dataLabels: { enabled:false },
+    chart:{type:'area',height:150,toolbar:{show:false},background:'transparent',animations:{enabled:false}},
+    grid:{strokeDashArray:4,borderColor:'#14243b',padding:{top:5,bottom:5,left:10,right:15}},
+    stroke:{curve:'smooth',width:2.5},
+    colors:[color],
+    fill:{type:'gradient',gradient:{shade:'dark',type:'vertical',shadeIntensity:0.4,gradientToColors:['transparent'],stops:[0,100]}},
+    series:[{name,data:seriesData.map(d=>d.y)}],
+    xaxis:{categories:seriesData.map(d=>(d.x||'').slice(5)),labels:{style:{colors:'#527193',fontFamily:'monospace',fontSize:'9px'},rotate:0,hideOverlappingLabels:true},tickAmount:5,axisBorder:{show:false},axisTicks:{show:false}},
+    yaxis:{labels:{style:{colors:'#527193',fontFamily:'monospace',fontSize:'10px'},formatter:v=>`$${v.toFixed(2)}T`}},
+    theme:{mode:'dark'},
+    tooltip:{theme:'dark',y:{formatter:v=>`$${v.toFixed(3)}T`}},
+    dataLabels:{enabled:false},
   };
 }
 
 export default function Dashboard() {
   const [stock, setStock] = useState({});
-  const [heatmap, setHeatmap] = useState({});
+  const [heatUS, setHeatUS] = useState({});
+  const [heatKR, setHeatKR] = useState({});
   const [liquidity, setLiquidity] = useState({});
   const [syncTime, setSyncTime] = useState('대기 중...');
   const [loading, setLoading] = useState(false);
@@ -124,23 +189,67 @@ export default function Dashboard() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  const fetchStock = useCallback(async () => {
+    // 미국: Yahoo v8 chart 병렬
+    const [nvda, qqq, spy, soxx, nqf, clf, vix, usdkrw] = await Promise.all([
+      yahooChart('NVDA'),
+      yahooChart('QQQ'),
+      yahooChart('SPY'),
+      yahooChart('SOXX'),
+      yahooChart('NQ=F'),
+      yahooChart('CL=F'),
+      yahooChart('%5EVIX'),
+      yahooChart('USDKRW=X'),
+    ]);
+
+    // 한국: 네이버 API 병렬
+    const [sam, hyn] = await Promise.all([
+      naverStock('005930'),
+      naverStock('000660'),
+    ]);
+
+    setStock({
+      nasdaq: qqq?.price, nasdaqChg: qqq?.chg,
+      nasdaqFut: nqf?.price, nasdaqFutChg: nqf?.chg,
+      sp500: spy?.price, sp500Chg: spy?.chg,
+      sox: soxx?.price, soxChg: soxx?.chg,
+      nvda: nvda?.price, nvdaChg: nvda?.chg,
+      samsung: sam?.price ? parseFloat(String(sam.price).replace(/,/g,'')) : null,
+      samsungChg: sam?.chg,
+      hynix: hyn?.price ? parseFloat(String(hyn.price).replace(/,/g,'')) : null,
+      hynixChg: hyn?.chg,
+      wti: clf?.price, wtiChg: clf?.chg,
+      usdkrw: usdkrw?.price, usdkrwChg: usdkrw?.chg,
+      vix: vix?.price, vixChg: vix?.chg,
+      kospiFut: null, kospiFutChg: null,
+    });
+  }, []);
+
+  const fetchHeatmap = useCallback(async () => {
+    // 미국 히트맵: Yahoo v8 병렬
+    const allUS = US_SECTORS.flatMap(s => s.items);
+    const usResults = await Promise.all(allUS.map(i => yahooChart(i.sym)));
+    const usMap = {};
+    allUS.forEach((item, idx) => { usMap[item.sym] = usResults[idx]?.chg ?? null; });
+    setHeatUS(usMap);
+
+    // 한국 히트맵: 네이버 API 병렬
+    const krResults = await Promise.all(KR_STOCKS.map(i => naverStock(i.code)));
+    const krMap = {};
+    KR_STOCKS.forEach((item, idx) => { krMap[item.code] = krResults[idx]?.chg ?? null; });
+    setHeatKR(krMap);
+  }, []);
+
+  const fetchLiquidity = useCallback(async () => {
+    try { const r = await fetch('/api/liquidity'); setLiquidity(await r.json()); } catch {}
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true); setSyncTime('동기화 중...');
-    try {
-      const [sRes, lRes] = await Promise.allSettled([
-        fetch('/api/stock').then(r=>r.json()),
-        fetch('/api/liquidity').then(r=>r.json()),
-      ]);
-      if (sRes.status==='fulfilled') {
-        const d = sRes.value;
-        setStock(d);
-        setHeatmap(d.heatmap ?? {});
-      }
-      if (lRes.status==='fulfilled') setLiquidity(lRes.value);
-      setSyncTime(new Date().toLocaleTimeString('ko-KR'));
-    } catch { setSyncTime('연동 실패'); }
+    await Promise.all([fetchStock(), fetchLiquidity(), fetchHeatmap()]);
+    setSyncTime(new Date().toLocaleTimeString('ko-KR'));
     setLoading(false);
-  }, []);
+  }, [fetchStock, fetchLiquidity, fetchHeatmap]);
 
   useEffect(() => { if (mounted) fetchAll(); }, [mounted, fetchAll]);
 
@@ -151,10 +260,9 @@ export default function Dashboard() {
       const ApexCharts = (await import('apexcharts')).default;
       if (destroyed) return;
       const { series } = liquidity;
-      const keys = ['net','fed','tga','rrp'];
       if (!chartsInitRef.current) {
         chartsInitRef.current = true;
-        for (const key of keys) {
+        for (const key of ['net','fed','tga','rrp']) {
           if (destroyed) break;
           const el = document.getElementById(`chart-${key}`);
           if (!el || el.children.length > 0) continue;
@@ -162,7 +270,7 @@ export default function Dashboard() {
           try { const c = new ApexCharts(el, buildApexConfig(meta.color, series[key], meta.label)); await c.render(); chartsRef.current[key]=c; } catch {}
         }
       } else {
-        for (const key of keys) {
+        for (const key of ['net','fed','tga','rrp']) {
           const c = chartsRef.current[key];
           if (!c) continue;
           try { c.updateSeries([{data: series[key].map(d=>d.y)}]); } catch {}
@@ -175,10 +283,10 @@ export default function Dashboard() {
 
   const cur = liquidity?.current ?? {};
   const s = stock;
-  const isRisk = s.soxChg != null && s.soxChg <= -3;
+  const isRisk = s.soxChg!=null && s.soxChg<=-3;
   const newsFeed = buildNewsFeed(s);
   const usMaxMcap = Math.max(...US_SECTORS.flatMap(sec=>sec.items.map(i=>i.mcap)));
-  const krMaxMcap = Math.max(...KR_ITEMS.map(i=>i.mcap));
+  const krMaxMcap = Math.max(...KR_STOCKS.map(i=>i.mcap));
 
   if (!mounted) return null;
 
@@ -234,7 +342,7 @@ export default function Dashboard() {
                     <span style={{fontSize:10,background:'#1e293b',color:'#cbd5e1',padding:'2px 8px',borderRadius:4,fontWeight:700,whiteSpace:'nowrap'}}>{n.cat}</span>
                     <span style={{fontSize:12,color:'#cbd5e1',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.title}</span>
                   </div>
-                  <span style={{fontSize:10,color:'#475569',fontFamily:'monospace',whiteSpace:'nowrap'}}>{n.provider}</span>
+                  <span style={{fontSize:10,color:'#475569',fontFamily:'monospace',whiteSpace:'nowrap'}}>{n.provider??'네이버 경제'}</span>
                 </a>
               ))}
             </div>
@@ -244,7 +352,7 @@ export default function Dashboard() {
         {/* 마켓 티커 */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
           <h2 style={{fontSize:11,fontWeight:700,color:'#64748b',letterSpacing:'0.1em',textTransform:'uppercase',margin:0}}>🌐 LIVE MARKET TICKER</h2>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>출처: Yahoo Finance (yahoo-finance2)</span>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>미국: Yahoo Finance v8 · 한국: 네이버 금융</span>
         </div>
         <div className="grid4" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:24}}>
           {[
@@ -254,13 +362,13 @@ export default function Dashboard() {
             {label:'필라델피아 반도체',val:s.sox,chg:s.soxChg},
             {label:'KOSPI200 야간선물',val:s.kospiFut,chg:s.kospiFutChg},
             {label:'엔비디아 (NVDA)',val:s.nvda,chg:s.nvdaChg},
-            {label:'삼성전자',val:s.samsung,chg:s.samsungChg,digits:0},
-            {label:'SK하이닉스',val:s.hynix,chg:s.hynixChg,digits:0},
+            {label:'삼성전자',val:s.samsung,chg:s.samsungChg,digits:0,krw:true},
+            {label:'SK하이닉스',val:s.hynix,chg:s.hynixChg,digits:0,krw:true},
           ].map((item,i)=>(
             <div key={i} className="card" style={{display:'flex',flexDirection:'column',gap:4}}>
               <span style={{fontSize:11,fontWeight:700,color:'#94a3b8'}}>{item.label}</span>
               <span style={{fontSize:15,fontWeight:900,color:'#fff',fontFamily:'monospace'}}>
-                {item.val==null?'--':item.val.toLocaleString('en-US',{maximumFractionDigits:item.digits??2})}
+                {item.val==null?'--':`${item.krw?'₩':''}${item.val.toLocaleString('ko-KR',{maximumFractionDigits:item.digits??2})}`}
               </span>
               <ChangeLabel value={item.chg}/>
             </div>
@@ -291,7 +399,7 @@ export default function Dashboard() {
         {/* 미국 히트맵 */}
         <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇺🇸 미국 섹터별 히트맵 (셀 크기 = 시총 비례)</h3>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>클릭 시 Yahoo Finance</span>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>Yahoo Finance v8</span>
         </div>
         <div className="card" style={{marginBottom:16}}>
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -299,7 +407,9 @@ export default function Dashboard() {
               <div key={sec.sector}>
                 <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',marginBottom:6,letterSpacing:'0.05em'}}>{sec.sector}</div>
                 <div style={{display:'grid',gridTemplateColumns:`repeat(${sec.items.length},1fr)`,gap:4,alignItems:'end'}}>
-                  {sec.items.map(item=><HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatmap[item.sym]?.chg??null} height={calcH(item.mcap,usMaxMcap,40,88)}/>)}
+                  {sec.items.map(item=>(
+                    <HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatUS[item.sym]??null} height={calcH(item.mcap,usMaxMcap,40,88)}/>
+                  ))}
                 </div>
               </div>
             ))}
@@ -314,11 +424,17 @@ export default function Dashboard() {
         {/* 한국 히트맵 */}
         <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇰🇷 한국 코스피 대형주 히트맵 (셀 크기 = 시총 비례)</h3>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>출처: Yahoo Finance</span>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>네이버 금융</span>
         </div>
         <div className="card" style={{marginBottom:24}}>
           <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:4,alignItems:'end'}}>
-            {KR_ITEMS.map(item=><HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatmap[item.sym]?.chg??null} height={calcH(item.mcap,krMaxMcap,44,80)}/>)}
+            {KR_STOCKS.map(item=>(
+              <HeatCell key={item.code} label={item.label} sym={item.code}
+                chg={heatKR[item.code]??null}
+                height={calcH(item.mcap,krMaxMcap,44,80)}
+                onClick={()=>window.open(`https://finance.naver.com/item/main.naver?code=${item.code}`,'_blank')}
+              />
+            ))}
           </div>
         </div>
 
