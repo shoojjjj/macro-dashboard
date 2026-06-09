@@ -1,3 +1,5 @@
+import yahooFinance from 'yahoo-finance2';
+
 // yahoo-finance2 공식 문서 기준: require('yahoo-finance2').default
 const yahooFinance = require('yahoo-finance2').default;
 
