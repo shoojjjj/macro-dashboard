@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['yahoo-finance2'],
-  experimental: {
-    esmExternals: 'loose',
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push('yahoo-finance2');
+    }
+    return config;
   },
 }
 module.exports = nextConfig
