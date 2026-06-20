@@ -33,19 +33,40 @@ const US_SECTORS = [
   ]},
 ];
 
-const KR_STOCKS = [
-  {code:'005930',label:'삼성전자',mcap:350},
-  {code:'000660',label:'SK하이닉스',mcap:120},
-  {code:'005380',label:'현대차',mcap:55},
-  {code:'000270',label:'기아',mcap:42},
-  {code:'035420',label:'NAVER',mcap:38},
-  {code:'051910',label:'LG화학',mcap:28},
-  {code:'006400',label:'삼성SDI',mcap:25},
-  {code:'003670',label:'포스코홀딩스',mcap:22},
-  {code:'028260',label:'삼성물산',mcap:20},
-  {code:'035720',label:'카카오',mcap:18},
-  {code:'096770',label:'SK이노',mcap:15},
-  {code:'066570',label:'LG전자',mcap:14},
+const KR_SECTORS = [
+  { sector:'반도체/전자', items:[
+    {code:'005930',label:'삼성전자',mcap:350},
+    {code:'000660',label:'SK하이닉스',mcap:120},
+    {code:'066570',label:'LG전자',mcap:14},
+    {code:'009150',label:'삼성전기',mcap:9},
+  ]},
+  { sector:'자동차', items:[
+    {code:'005380',label:'현대차',mcap:55},
+    {code:'000270',label:'기아',mcap:42},
+    {code:'012330',label:'현대모비스',mcap:23},
+  ]},
+  { sector:'2차전지/화학', items:[
+    {code:'051910',label:'LG화학',mcap:28},
+    {code:'006400',label:'삼성SDI',mcap:25},
+    {code:'373220',label:'LG에너지솔루션',mcap:75},
+    {code:'096770',label:'SK이노',mcap:15},
+  ]},
+  { sector:'금융/지주', items:[
+    {code:'028260',label:'삼성물산',mcap:20},
+    {code:'105560',label:'KB금융',mcap:30},
+    {code:'055550',label:'신한지주',mcap:24},
+    {code:'316140',label:'우리금융',mcap:12},
+  ]},
+  { sector:'인터넷/엔터', items:[
+    {code:'035420',label:'NAVER',mcap:38},
+    {code:'035720',label:'카카오',mcap:18},
+    {code:'352820',label:'하이브',mcap:8},
+  ]},
+  { sector:'바이오/제약', items:[
+    {code:'207940',label:'삼성바이오로직스',mcap:60},
+    {code:'068270',label:'셀트리온',mcap:25},
+    {code:'326030',label:'SK바이오팜',mcap:7},
+  ]},
 ];
 
 // ── 유틸 ──────────────────────────────────────────────
@@ -165,24 +186,18 @@ function Treemap({ items, width, height, onTileClick }) {
 }
 
 // 섹터 라벨이 붙은 그리드형 멀티 트리맵 (finviz 스타일)
-function SectorTreemapGrid({ sectors, totalWidth, onTileClick }) {
-  // 2열 그리드로 섹터 배치
-  const cols = totalWidth > 500 ? 2 : 1;
+function SectorTreemapGrid({ sectors, totalWidth, cols=2, onTileClick }) {
   const gap = 8;
   const colWidth = (totalWidth - gap*(cols-1)) / cols;
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:`repeat(${cols},1fr)`, gap }}>
-      {sectors.map(sec => {
-        const secTotal = sec.items.reduce((s,i)=>s+i.mcap,0);
-        const h = Math.max(90, Math.min(160, secTotal / 18));
-        return (
-          <div key={sec.sector}>
-            <div style={{fontSize:9,fontWeight:700,color:'#7d8aa0',textTransform:'uppercase',marginBottom:3,letterSpacing:'0.05em',background:'#0f1929',padding:'3px 6px',borderRadius:'4px 4px 0 0'}}>{sec.sector}</div>
-            <Treemap items={sec.items} width={colWidth} height={h} onTileClick={onTileClick}/>
-          </div>
-        );
-      })}
+      {sectors.map(sec => (
+        <div key={sec.sector}>
+          <div style={{fontSize:9,fontWeight:700,color:'#7d8aa0',textTransform:'uppercase',marginBottom:3,letterSpacing:'0.05em',background:'#0f1929',padding:'3px 6px',borderRadius:'4px 4px 0 0'}}>{sec.sector}</div>
+          <Treemap items={sec.items} width={colWidth} height={110} onTileClick={onTileClick}/>
+        </div>
+      ))}
     </div>
   );
 }
@@ -312,8 +327,9 @@ export default function Dashboard() {
     sector: sec.sector,
     items: sec.items.map(item => ({ ...item, chg: heatUS[item.sym] ?? null })),
   }));
-  const krTreemapData = KR_STOCKS.map(item => ({
-    ...item, sym: item.code, chg: heatKR[item.code] ?? null,
+  const krSectorsWithChg = KR_SECTORS.map(sec => ({
+    sector: sec.sector,
+    items: sec.items.map(item => ({ ...item, sym: item.code, chg: heatKR[item.code] ?? null })),
   }));
 
   if (!mounted) return null;
@@ -447,6 +463,7 @@ export default function Dashboard() {
           <SectorTreemapGrid
             sectors={usSectorsWithChg}
             totalWidth={treemapWidth - 28}
+            cols={2}
             onTileClick={(t) => window.open(`https://finance.yahoo.com/quote/${t.sym}`, '_blank')}
           />
           <div style={{display:'flex',alignItems:'center',gap:4,marginTop:12,paddingTop:10,borderTop:'1px solid #1e293b',justifyContent:'center',flexWrap:'wrap'}}>
@@ -456,16 +473,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── 한국 히트맵 (트리맵) ── */}
+        {/* ── 한국 히트맵 (섹터별 트리맵) ── */}
         <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇰🇷 한국 코스피 대형주 히트맵 (타일 크기 = 시총 비례)</h3>
+          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇰🇷 한국 코스피 섹터별 히트맵 (타일 크기 = 시총 비례)</h3>
           <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>클릭 시 네이버 금융</span>
         </div>
         <div className="card" style={{marginBottom:24, overflow:'hidden'}}>
-          <Treemap
-            items={krTreemapData}
-            width={treemapWidth - 28}
-            height={220}
+          <SectorTreemapGrid
+            sectors={krSectorsWithChg}
+            totalWidth={treemapWidth - 28}
+            cols={3}
             onTileClick={(t) => window.open(`https://finance.naver.com/item/main.naver?code=${t.sym}`, '_blank')}
           />
         </div>
