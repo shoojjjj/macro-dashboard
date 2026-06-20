@@ -45,6 +45,21 @@ async function fetchNaver(code) {
   } catch { return null; }
 }
 
+async function fetchKospiNightFutures() {
+  try {
+    // 네이버 코스피200 야간선물 (KRX 야간 선물 코드: 101S)
+    const r = await fetch('https://polling.finance.naver.com/api/realtime/worldstock/index/FUT.NG.KS200');
+    if (!r.ok) return null;
+    const d = await r.json();
+    const item = d?.datas?.[0];
+    if (!item) return null;
+    return {
+      price: parseFloat(String(item.closePrice ?? item.closePriceRaw ?? '').replace(/,/g,'')),
+      chg: parseFloat(item.fluctuationsRatio ?? item.fluctuationsRatioRaw),
+    };
+  } catch { return null; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
 
@@ -56,6 +71,8 @@ export default async function handler(req, res) {
     const krResults = await Promise.all(KR_CODES.map(fetchNaver));
     const krMap = {};
     KR_CODES.forEach((code, i) => { krMap[code] = krResults[i]; });
+
+    const kospiFut = await fetchKospiNightFutures();
 
     const g = (sym) => usMap[sym] ?? { price: null, chg: null };
 
@@ -70,7 +87,7 @@ export default async function handler(req, res) {
       wti: g('CL=F').price, wtiChg: g('CL=F').chg,
       usdkrw: g('USDKRW=X').price, usdkrwChg: g('USDKRW=X').chg,
       vix: g('%5EVIX').price, vixChg: g('%5EVIX').chg,
-      kospiFut: null, kospiFutChg: null,
+      kospiFut: kospiFut?.price ?? null, kospiFutChg: kospiFut?.chg ?? null,
       heatUS: usMap,
       heatKR: krMap,
     });

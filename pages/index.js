@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-// ── 히트맵 종목 ────────────────────────────────────────
+// ── 히트맵 종목 (트리맵 비율용 mcap 포함) ──────────────
 const US_SECTORS = [
   { sector:'반도체', items:[
     {sym:'NVDA',label:'NVDA',mcap:3200},
@@ -50,7 +50,6 @@ const KR_STOCKS = [
 
 // ── 유틸 ──────────────────────────────────────────────
 const fmtT = (v) => v == null ? '--' : `$${v.toFixed(3)}T`;
-const fmtP = (v, digits=2) => v == null ? '--' : v.toLocaleString('en-US', {maximumFractionDigits: digits});
 
 function ChangeLabel({ value, small=false }) {
   if (value == null) return <span style={{color:'#64748b',fontSize:small?10:11}}>--</span>;
@@ -61,40 +60,115 @@ function ChangeLabel({ value, small=false }) {
 }
 
 function heatColor(chg) {
-  if (chg==null) return '#1a2535';
-  if (chg>=3)  return '#065f46';
-  if (chg>=2)  return '#047857';
-  if (chg>=1)  return '#059669';
-  if (chg>=0)  return '#0d7a4e';
-  if (chg>=-1) return '#b91c1c';
-  if (chg>=-2) return '#991b1b';
-  if (chg>=-3) return '#7f1d1d';
-  return '#6b1212';
+  if (chg==null) return '#2a2f3a';
+  if (chg>=3)  return '#0d8a4f';
+  if (chg>=2)  return '#0fa05a';
+  if (chg>=1)  return '#13b768';
+  if (chg>=0.3) return '#1fcf78';
+  if (chg>=-0.3) return '#3a4150';
+  if (chg>=-1) return '#d94f4f';
+  if (chg>=-2) return '#c43838';
+  if (chg>=-3) return '#a82424';
+  return '#841414';
 }
 
-function calcH(mcap, maxMcap, minH=40, maxH=88) {
-  return minH + (mcap/maxMcap)*(maxH-minH);
+// ── 트리맵 (finviz 스타일): squarified treemap 알고리즘 ──
+function squarify(items, x, y, w, h) {
+  // items: [{...,mcap}], 면적은 mcap 비례
+  if (items.length === 0) return [];
+  if (items.length === 1) return [{ ...items[0], x, y, w, h }];
+
+  const total = items.reduce((s,i)=>s+i.mcap,0);
+  const area = w*h;
+
+  // 첫 항목(들)을 짧은 변에 맞춰 배치
+  let i = 0, rowSum = 0;
+  const isWide = w >= h;
+  const sideLen = isWide ? h : w;
+
+  // 한 행에 넣을 아이템 결정 (간단화: 비율 기준 분할)
+  // 단순 알고리즘: 누적 비율로 분할 라인 결정
+  const results = [];
+  let consumed = 0;
+  let remaining = items;
+  let rx=x, ry=y, rw=w, rh=h;
+
+  while (remaining.length > 0) {
+    const remTotal = remaining.reduce((s,i)=>s+i.mcap,0);
+    const wide = rw >= rh;
+    const sLen = wide ? rh : rw;
+
+    // 그리디하게 한 줄 구성 (최대 3개씩)
+    let rowCount = Math.min(remaining.length, remaining.length <= 3 ? remaining.length : Math.ceil(remaining.length/2));
+    if (remaining.length <= 2) rowCount = remaining.length;
+
+    const row = remaining.slice(0, rowCount);
+    const rowTotal = row.reduce((s,i)=>s+i.mcap,0);
+    const rowAreaFrac = rowTotal / remTotal;
+
+    if (wide) {
+      const rowW = rw * rowAreaFrac;
+      let cy = ry;
+      row.forEach(item => {
+        const itemH = rh * (item.mcap / rowTotal);
+        results.push({ ...item, x: rx, y: cy, w: rowW, h: itemH });
+        cy += itemH;
+      });
+      rx += rowW; rw -= rowW;
+    } else {
+      const rowH = rh * rowAreaFrac;
+      let cx = rx;
+      row.forEach(item => {
+        const itemW = rw * (item.mcap / rowTotal);
+        results.push({ ...item, x: cx, y: ry, w: itemW, h: rowH });
+        cx += itemW;
+      });
+      ry += rowH; rh -= rowH;
+    }
+    remaining = remaining.slice(rowCount);
+  }
+  return results;
 }
 
-function HeatCell({ label, sym, chg, height=56, onClick }) {
+function TreemapTile({ tile, onClick }) {
+  const showLabel = tile.w > 38 && tile.h > 24;
+  const big = tile.w > 70 && tile.h > 50;
   return (
-    <div onClick={onClick||(() => window.open(`https://finance.yahoo.com/quote/${sym}`,'_blank'))}
-      onMouseEnter={e=>e.currentTarget.style.filter='brightness(1.25)'}
+    <div onClick={onClick}
+      onMouseEnter={e=>e.currentTarget.style.filter='brightness(1.3)'}
       onMouseLeave={e=>e.currentTarget.style.filter='brightness(1)'}
-      style={{background:heatColor(chg),borderRadius:6,height,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'filter 0.15s',border:'1px solid rgba(255,255,255,0.06)',padding:'2px 4px'}}>
-      <span style={{fontSize:height>60?11:9,fontWeight:800,color:'#fff',fontFamily:'monospace',textAlign:'center',lineHeight:1.2}}>{label}</span>
-      <span style={{fontSize:height>60?10:8,fontWeight:700,color:'rgba(255,255,255,0.85)',fontFamily:'monospace',marginTop:2}}>
-        {chg==null?'--':`${chg>=0?'+':''}${chg.toFixed(2)}%`}
-      </span>
+      style={{
+        position:'absolute', left:tile.x, top:tile.y, width:tile.w, height:tile.h,
+        background:heatColor(tile.chg), border:'1px solid #040c14',
+        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+        cursor:'pointer', transition:'filter 0.15s', overflow:'hidden', boxSizing:'border-box',
+      }}>
+      {showLabel && (
+        <>
+          <span style={{fontSize:big?13:10, fontWeight:800, color:'#fff', fontFamily:'monospace', textShadow:'0 1px 2px rgba(0,0,0,0.4)'}}>{tile.label}</span>
+          <span style={{fontSize:big?11:9, fontWeight:700, color:'rgba(255,255,255,0.9)', fontFamily:'monospace', marginTop:1}}>
+            {tile.chg==null?'--':`${tile.chg>=0?'+':''}${tile.chg.toFixed(2)}%`}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Treemap({ items, width, height, onTileClick }) {
+  const tiles = squarify(items, 0, 0, width, height);
+  return (
+    <div style={{ position:'relative', width, height }}>
+      {tiles.map(t => <TreemapTile key={t.sym||t.code} tile={t} onClick={() => onTileClick(t)} />)}
     </div>
   );
 }
 
 const CHART_DESC = {
-  net:{color:'#00e87a',label:'실질 가용 순유동성 추이',    desc:'Fed자산 − TGA − RRP = 시중에 실제로 풀린 돈. 높을수록 주식·위험자산 랠리에 유리.'},
-  fed:{color:'#ff4a5a',label:'Fed 총자산 (Balance Sheet)',desc:'연준이 보유한 국채·MBS 총합. 증가(QE) → 유동성↑. 감소(QT) → 긴축.'},
-  tga:{color:'#2563eb',label:'TGA 재무부 일반계정 잔고',  desc:'정부 통장 잔고. 감소 → 재정지출 확대 → 시중 유동성↑. 증가 → 돈이 시장에서 잠김.'},
-  rrp:{color:'#a855f7',label:'RRP 연준 역레포 잔고',      desc:'MMF가 연준에 맡긴 단기 예치금. 감소 → 그 돈이 시장으로 유입 → 유동성 공급 효과.'},
+  net:{color:'#00e87a',label:'실질 가용 순유동성',    desc:'Fed자산 − TGA − RRP. 시중에 실제로 풀린 돈의 양. 수치가 늘어날수록 주식·코인 등 위험자산에 우호적인 환경.'},
+  fed:{color:'#ff4a5a',label:'Fed 총자산',desc:'연준이 보유한 국채·MBS 총합. 늘어나면(양적완화) 유동성 공급↑, 줄어들면(양적긴축) 유동성 회수.'},
+  tga:{color:'#2563eb',label:'TGA 재무부 잔고',  desc:'정부의 "통장 잔고". 잔고가 줄면 정부가 돈을 풀고 있다는 뜻(유동성↑), 늘면 세금 등으로 돈을 거둬들이는 중(유동성↓).'},
+  rrp:{color:'#a855f7',label:'RRP 역레포 잔고',      desc:'MMF(머니마켓펀드)가 연준에 단기로 맡겨둔 돈. 잔고가 줄면 그 돈이 시중으로 흘러나와 유동성을 보충.'},
 };
 
 function buildNewsFeed(s) {
@@ -133,22 +207,31 @@ export default function Dashboard() {
   const [syncTime, setSyncTime] = useState('대기 중...');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [treemapWidth, setTreemapWidth] = useState(860);
   const chartsRef = useRef({});
   const chartsInitRef = useRef(false);
+  const containerRef = useRef(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const update = () => {
+      if (containerRef.current) setTreemapWidth(containerRef.current.offsetWidth);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [mounted]);
 
   const fetchStockAndHeatmap = useCallback(async () => {
     try {
       const r = await fetch('/api/stock');
       const d = await r.json();
       setStock(d);
-
-      // heatUS: { 'NVDA': {price,chg}, ... } -> { 'NVDA': chg }
       const usMap = {};
       Object.entries(d.heatUS ?? {}).forEach(([sym, v]) => { usMap[sym] = v?.chg ?? null; });
       setHeatUS(usMap);
-
       const krMap = {};
       Object.entries(d.heatKR ?? {}).forEach(([code, v]) => { krMap[code] = v?.chg ?? null; });
       setHeatKR(krMap);
@@ -200,8 +283,14 @@ export default function Dashboard() {
   const s = stock;
   const isRisk = s.soxChg!=null && s.soxChg<=-3;
   const newsFeed = buildNewsFeed(s);
-  const usMaxMcap = Math.max(...US_SECTORS.flatMap(sec=>sec.items.map(i=>i.mcap)));
-  const krMaxMcap = Math.max(...KR_STOCKS.map(i=>i.mcap));
+
+  // 트리맵용 데이터 가공
+  const usTreemapData = US_SECTORS.flatMap(sec => sec.items.map(item => ({
+    ...item, chg: heatUS[item.sym] ?? null,
+  })));
+  const krTreemapData = KR_STOCKS.map(item => ({
+    ...item, sym: item.code, chg: heatKR[item.code] ?? null,
+  }));
 
   if (!mounted) return null;
 
@@ -219,7 +308,7 @@ export default function Dashboard() {
         @media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)!important}.grid2{grid-template-columns:1fr!important}}
       `}</style>
 
-      <div style={{maxWidth:900,margin:'0 auto',padding:16,paddingBottom:80}}>
+      <div style={{maxWidth:900,margin:'0 auto',padding:16,paddingBottom:80}} ref={containerRef}>
 
         {/* 헤더 */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #1e293b',paddingBottom:20,marginBottom:24,flexWrap:'wrap',gap:12}}>
@@ -257,7 +346,7 @@ export default function Dashboard() {
                     <span style={{fontSize:10,background:'#1e293b',color:'#cbd5e1',padding:'2px 8px',borderRadius:4,fontWeight:700,whiteSpace:'nowrap'}}>{n.cat}</span>
                     <span style={{fontSize:12,color:'#cbd5e1',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.title}</span>
                   </div>
-                  <span style={{fontSize:10,color:'#475569',fontFamily:'monospace',whiteSpace:'nowrap'}}>{n.provider??'네이버 경제'}</span>
+                  <span style={{fontSize:10,color:'#475569',fontFamily:'monospace',whiteSpace:'nowrap'}}>네이버 경제</span>
                 </a>
               ))}
             </div>
@@ -267,7 +356,7 @@ export default function Dashboard() {
         {/* 마켓 티커 */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
           <h2 style={{fontSize:11,fontWeight:700,color:'#64748b',letterSpacing:'0.1em',textTransform:'uppercase',margin:0}}>🌐 LIVE MARKET TICKER</h2>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>미국: Yahoo Finance v8 · 한국: 네이버 금융</span>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>미국: Yahoo Finance · 한국: 네이버 금융</span>
         </div>
         <div className="grid4" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:24}}>
           {[
@@ -297,68 +386,73 @@ export default function Dashboard() {
           <div className="card"><span style={{fontSize:10,fontWeight:700,color:'#2dd4bf'}}>원/달러 환율</span><div style={{fontSize:13,fontFamily:'monospace',fontWeight:700,color:'#fff',marginTop:4}}>₩{s.usdkrw?.toFixed(1)??'--'} <ChangeLabel value={s.usdkrwChg} small/></div></div>
         </div>
 
-        {/* 순유동성 */}
-        <div className="card" style={{marginBottom:24}}>
+        {/* ── 순유동성: 설명 + 헤드라인 수치 ── */}
+        <div className="card" style={{marginBottom:14}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
             <span style={{fontSize:11,fontWeight:700,color:'#94a3b8',textTransform:'uppercase'}}>REALTIME NET LIQUIDITY INDEX</span>
             <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>출처: FRED / US Treasury</span>
           </div>
           <div style={{fontSize:28,fontFamily:'monospace',fontWeight:900,color:'#00e87a'}}>{fmtT(cur.netLiquidity)}</div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginTop:12,paddingTop:12,borderTop:'1px solid #1e293b',textAlign:'center'}}>
+          <div style={{fontSize:11,color:'#94a3b8',marginTop:6,marginBottom:10,lineHeight:1.6}}>
+            <b style={{color:'#00e87a'}}>순유동성</b> = Fed 총자산 − TGA(재무부 잔고) − RRP(역레포). 시중에 실제로 풀려서 주식·자산시장으로 흘러들어갈 수 있는 돈의 양을 나타내요. <b>수치가 늘어나면 위험자산(주식·코인 등)에 우호적</b>이고, 줄어들면 긴축적인 환경이에요.
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginTop:8,paddingTop:12,borderTop:'1px solid #1e293b',textAlign:'center'}}>
             {[{label:'Fed 총자산',val:cur.fed,color:'#ff4a5a'},{label:'TGA 재무부',val:cur.tga,color:'#2563eb'},{label:'RRP 역레포',val:cur.rrp,color:'#a855f7'},{label:'미국 MMF',val:cur.mmf,color:'#f59e0b'}].map((item,i)=>(
               <div key={i}><span style={{fontSize:10,color:'#64748b',display:'block',marginBottom:2}}>{item.label}</span><span style={{fontSize:12,fontFamily:'monospace',fontWeight:700,color:item.color}}>{fmtT(item.val)}</span></div>
             ))}
           </div>
         </div>
 
-        {/* 미국 히트맵 */}
-        <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇺🇸 미국 섹터별 히트맵 (셀 크기 = 시총 비례)</h3>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>Yahoo Finance v8</span>
-        </div>
-        <div className="card" style={{marginBottom:16}}>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {US_SECTORS.map(sec=>(
-              <div key={sec.sector}>
-                <div style={{fontSize:10,fontWeight:700,color:'#475569',textTransform:'uppercase',marginBottom:6,letterSpacing:'0.05em'}}>{sec.sector}</div>
-                <div style={{display:'grid',gridTemplateColumns:`repeat(${sec.items.length},1fr)`,gap:4,alignItems:'end'}}>
-                  {sec.items.map(item=>(
-                    <HeatCell key={item.sym} label={item.label} sym={item.sym} chg={heatUS[item.sym]??null} height={calcH(item.mcap,usMaxMcap,40,88)}/>
-                  ))}
-                </div>
-              </div>
-            ))}
+        {/* ── 순유동성 그래프 (큰 메인 차트) ── */}
+        <div className="card" style={{marginBottom:24}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#00e87a',display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:'#00e87a',display:'inline-block'}}/>실질 가용 순유동성 추이
           </div>
+          <div style={{fontSize:10,color:'#64748b',marginBottom:10,lineHeight:1.5}}>
+            최근 변화 흐름을 시계열로 보여줘요. 상승 추세면 유동성 공급 국면, 하락 추세면 유동성 회수(긴축) 국면이에요.
+          </div>
+          <div id="chart-net" style={{width:'100%',height:200}}/>
+        </div>
+
+        {/* ── 미국 히트맵 (트리맵) ── */}
+        <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇺🇸 미국 섹터별 히트맵 (타일 크기 = 시총 비례)</h3>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>클릭 시 Yahoo Finance</span>
+        </div>
+        <div className="card" style={{marginBottom:16, overflow:'hidden'}}>
+          <Treemap
+            items={usTreemapData}
+            width={treemapWidth - 28}
+            height={320}
+            onTileClick={(t) => window.open(`https://finance.yahoo.com/quote/${t.sym}`, '_blank')}
+          />
           <div style={{display:'flex',alignItems:'center',gap:4,marginTop:12,paddingTop:10,borderTop:'1px solid #1e293b',justifyContent:'center',flexWrap:'wrap'}}>
-            {[['#6b1212','-3%↓'],['#7f1d1d','-3%'],['#991b1b','-2%'],['#b91c1c','-1%'],['#0d7a4e','+0%'],['#059669','+1%'],['#047857','+2%'],['#065f46','+3%↑']].map(([c,l])=>(
+            {[['#841414','-3%↓'],['#a82424','-3%'],['#c43838','-2%'],['#d94f4f','-1%'],['#3a4150','0%'],['#1fcf78','+0.3%'],['#13b768','+1%'],['#0fa05a','+2%'],['#0d8a4f','+3%↑']].map(([c,l])=>(
               <div key={l} style={{display:'flex',alignItems:'center',gap:3}}><div style={{width:12,height:12,borderRadius:2,background:c}}/><span style={{fontSize:9,color:'#64748b',fontFamily:'monospace'}}>{l}</span></div>
             ))}
           </div>
         </div>
 
-        {/* 한국 히트맵 */}
+        {/* ── 한국 히트맵 (트리맵) ── */}
         <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇰🇷 한국 코스피 대형주 히트맵 (셀 크기 = 시총 비례)</h3>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>네이버 금융</span>
+          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇰🇷 한국 코스피 대형주 히트맵 (타일 크기 = 시총 비례)</h3>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>클릭 시 네이버 금융</span>
         </div>
-        <div className="card" style={{marginBottom:24}}>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:4,alignItems:'end'}}>
-            {KR_STOCKS.map(item=>(
-              <HeatCell key={item.code} label={item.label} sym={item.code}
-                chg={heatKR[item.code]??null}
-                height={calcH(item.mcap,krMaxMcap,44,80)}
-                onClick={()=>window.open(`https://finance.naver.com/item/main.naver?code=${item.code}`,'_blank')}
-              />
-            ))}
-          </div>
+        <div className="card" style={{marginBottom:24, overflow:'hidden'}}>
+          <Treemap
+            items={krTreemapData}
+            width={treemapWidth - 28}
+            height={220}
+            onTileClick={(t) => window.open(`https://finance.naver.com/item/main.naver?code=${t.sym}`, '_blank')}
+          />
         </div>
 
-        {/* 차트 */}
+        {/* ── 나머지 유동성 차트 3개 ── */}
         <div style={{marginBottom:14}}>
-          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>📈 Fed 유동성 지표 시계열 트렌드 (단위: $T)</h3>
+          <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>📈 Fed 유동성 구성요소 상세</h3>
         </div>
         <div className="grid2" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:14}}>
-          {['net','fed','tga','rrp'].map(key=>{
+          {['fed','tga','rrp'].map(key=>{
             const meta = CHART_DESC[key];
             return (
               <div key={key} className="card">
