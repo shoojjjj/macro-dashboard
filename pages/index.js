@@ -1,57 +1,6 @@
 import Head from 'next/head';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-// ── 네이버 금융 API (한국 주식/지수) ──────────────────
-// 브라우저에서 직접 호출, CORS 허용
-async function naverStock(code) {
-  try {
-    const r = await fetch(
-      `https://polling.finance.naver.com/api/realtime/domestic/stock/${code}`
-    );
-    const d = await r.json();
-    const item = d?.datas?.[0];
-    if (!item) return null;
-    return {
-      price: item.closePriceRaw ?? item.overMarketPriceInfo?.overPrice?.replace(/,/g,''),
-      chg: parseFloat(item.fluctuationsRatioRaw ?? item.fluctuationsRatio),
-      name: item.stockName,
-    };
-  } catch { return null; }
-}
-
-async function naverIndex(code) {
-  // 코스피/코스닥 지수
-  try {
-    const r = await fetch(
-      `https://polling.finance.naver.com/api/realtime/domestic/index/${code}`
-    );
-    const d = await r.json();
-    const item = d?.datas?.[0];
-    if (!item) return null;
-    return {
-      price: parseFloat(item.closePrice?.replace(/,/g,'')),
-      chg: parseFloat(item.fluctuationsRatio),
-    };
-  } catch { return null; }
-}
-
-// ── Yahoo Finance v8/chart (미국 주식/지수) ────────────
-// 개별 종목 브라우저 직접 호출
-async function yahooChart(symbol) {
-  try {
-    const r = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`
-    );
-    const d = await r.json();
-    const meta = d?.chart?.result?.[0]?.meta;
-    if (!meta) return null;
-    const price = meta.regularMarketPrice;
-    const prev = meta.chartPreviousClose;
-    const chg = prev ? ((price - prev) / prev) * 100 : null;
-    return { price, chg };
-  } catch { return null; }
-}
-
 // ── 히트맵 종목 ────────────────────────────────────────
 const US_SECTORS = [
   { sector:'반도체', items:[
@@ -189,55 +138,21 @@ export default function Dashboard() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  const fetchStock = useCallback(async () => {
-    // 미국: Yahoo v8 chart 병렬
-    const [nvda, qqq, spy, soxx, nqf, clf, vix, usdkrw] = await Promise.all([
-      yahooChart('NVDA'),
-      yahooChart('QQQ'),
-      yahooChart('SPY'),
-      yahooChart('SOXX'),
-      yahooChart('NQ=F'),
-      yahooChart('CL=F'),
-      yahooChart('%5EVIX'),
-      yahooChart('USDKRW=X'),
-    ]);
+  const fetchStockAndHeatmap = useCallback(async () => {
+    try {
+      const r = await fetch('/api/stock');
+      const d = await r.json();
+      setStock(d);
 
-    // 한국: 네이버 API 병렬
-    const [sam, hyn] = await Promise.all([
-      naverStock('005930'),
-      naverStock('000660'),
-    ]);
+      // heatUS: { 'NVDA': {price,chg}, ... } -> { 'NVDA': chg }
+      const usMap = {};
+      Object.entries(d.heatUS ?? {}).forEach(([sym, v]) => { usMap[sym] = v?.chg ?? null; });
+      setHeatUS(usMap);
 
-    setStock({
-      nasdaq: qqq?.price, nasdaqChg: qqq?.chg,
-      nasdaqFut: nqf?.price, nasdaqFutChg: nqf?.chg,
-      sp500: spy?.price, sp500Chg: spy?.chg,
-      sox: soxx?.price, soxChg: soxx?.chg,
-      nvda: nvda?.price, nvdaChg: nvda?.chg,
-      samsung: sam?.price ? parseFloat(String(sam.price).replace(/,/g,'')) : null,
-      samsungChg: sam?.chg,
-      hynix: hyn?.price ? parseFloat(String(hyn.price).replace(/,/g,'')) : null,
-      hynixChg: hyn?.chg,
-      wti: clf?.price, wtiChg: clf?.chg,
-      usdkrw: usdkrw?.price, usdkrwChg: usdkrw?.chg,
-      vix: vix?.price, vixChg: vix?.chg,
-      kospiFut: null, kospiFutChg: null,
-    });
-  }, []);
-
-  const fetchHeatmap = useCallback(async () => {
-    // 미국 히트맵: Yahoo v8 병렬
-    const allUS = US_SECTORS.flatMap(s => s.items);
-    const usResults = await Promise.all(allUS.map(i => yahooChart(i.sym)));
-    const usMap = {};
-    allUS.forEach((item, idx) => { usMap[item.sym] = usResults[idx]?.chg ?? null; });
-    setHeatUS(usMap);
-
-    // 한국 히트맵: 네이버 API 병렬
-    const krResults = await Promise.all(KR_STOCKS.map(i => naverStock(i.code)));
-    const krMap = {};
-    KR_STOCKS.forEach((item, idx) => { krMap[item.code] = krResults[idx]?.chg ?? null; });
-    setHeatKR(krMap);
+      const krMap = {};
+      Object.entries(d.heatKR ?? {}).forEach(([code, v]) => { krMap[code] = v?.chg ?? null; });
+      setHeatKR(krMap);
+    } catch {}
   }, []);
 
   const fetchLiquidity = useCallback(async () => {
@@ -246,10 +161,10 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setSyncTime('동기화 중...');
-    await Promise.all([fetchStock(), fetchLiquidity(), fetchHeatmap()]);
+    await Promise.all([fetchStockAndHeatmap(), fetchLiquidity()]);
     setSyncTime(new Date().toLocaleTimeString('ko-KR'));
     setLoading(false);
-  }, [fetchStock, fetchLiquidity, fetchHeatmap]);
+  }, [fetchStockAndHeatmap, fetchLiquidity]);
 
   useEffect(() => { if (mounted) fetchAll(); }, [mounted, fetchAll]);
 
