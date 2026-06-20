@@ -9,7 +9,6 @@ const US_SECTORS = [
     {sym:'AMD',label:'AMD',mcap:290},
     {sym:'QCOM',label:'QCOM',mcap:190},
     {sym:'MU',label:'MU',mcap:120},
-    {sym:'INTC',label:'INTC',mcap:90},
   ]},
   { sector:'빅테크', items:[
     {sym:'AAPL',label:'AAPL',mcap:3100},
@@ -17,19 +16,20 @@ const US_SECTORS = [
     {sym:'AMZN',label:'AMZN',mcap:2200},
     {sym:'GOOGL',label:'GOOGL',mcap:2100},
     {sym:'META',label:'META',mcap:1600},
-    {sym:'TSLA',label:'TSLA',mcap:900},
   ]},
   { sector:'금융', items:[
     {sym:'JPM',label:'JPM',mcap:720},
     {sym:'V',label:'V',mcap:640},
     {sym:'BAC',label:'BAC',mcap:350},
     {sym:'GS',label:'GS',mcap:190},
+    {sym:'MA',label:'MA',mcap:480},
   ]},
-  { sector:'에너지/기타', items:[
-    {sym:'BRK-B',label:'BRK-B',mcap:1100},
-    {sym:'WMT',label:'WMT',mcap:780},
+  { sector:'헬스케어/필수소비', items:[
     {sym:'UNH',label:'UNH',mcap:520},
+    {sym:'WMT',label:'WMT',mcap:780},
     {sym:'XOM',label:'XOM',mcap:480},
+    {sym:'BRK-B',label:'BRK-B',mcap:1100},
+    {sym:'TSLA',label:'TSLA',mcap:900},
   ]},
 ];
 
@@ -164,6 +164,29 @@ function Treemap({ items, width, height, onTileClick }) {
   );
 }
 
+// 섹터 라벨이 붙은 그리드형 멀티 트리맵 (finviz 스타일)
+function SectorTreemapGrid({ sectors, totalWidth, onTileClick }) {
+  // 2열 그리드로 섹터 배치
+  const cols = totalWidth > 500 ? 2 : 1;
+  const gap = 8;
+  const colWidth = (totalWidth - gap*(cols-1)) / cols;
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:`repeat(${cols},1fr)`, gap }}>
+      {sectors.map(sec => {
+        const secTotal = sec.items.reduce((s,i)=>s+i.mcap,0);
+        const h = Math.max(90, Math.min(160, secTotal / 18));
+        return (
+          <div key={sec.sector}>
+            <div style={{fontSize:9,fontWeight:700,color:'#7d8aa0',textTransform:'uppercase',marginBottom:3,letterSpacing:'0.05em',background:'#0f1929',padding:'3px 6px',borderRadius:'4px 4px 0 0'}}>{sec.sector}</div>
+            <Treemap items={sec.items} width={colWidth} height={h} onTileClick={onTileClick}/>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const CHART_DESC = {
   net:{color:'#00e87a',label:'실질 가용 순유동성',    desc:'Fed자산 − TGA − RRP. 시중에 실제로 풀린 돈의 양. 수치가 늘어날수록 주식·코인 등 위험자산에 우호적인 환경.'},
   fed:{color:'#ff4a5a',label:'Fed 총자산',desc:'연준이 보유한 국채·MBS 총합. 늘어나면(양적완화) 유동성 공급↑, 줄어들면(양적긴축) 유동성 회수.'},
@@ -285,9 +308,10 @@ export default function Dashboard() {
   const newsFeed = buildNewsFeed(s);
 
   // 트리맵용 데이터 가공
-  const usTreemapData = US_SECTORS.flatMap(sec => sec.items.map(item => ({
-    ...item, chg: heatUS[item.sym] ?? null,
-  })));
+  const usSectorsWithChg = US_SECTORS.map(sec => ({
+    sector: sec.sector,
+    items: sec.items.map(item => ({ ...item, chg: heatUS[item.sym] ?? null })),
+  }));
   const krTreemapData = KR_STOCKS.map(item => ({
     ...item, sym: item.code, chg: heatKR[item.code] ?? null,
   }));
@@ -414,16 +438,15 @@ export default function Dashboard() {
           <div id="chart-net" style={{width:'100%',height:200}}/>
         </div>
 
-        {/* ── 미국 히트맵 (트리맵) ── */}
+        {/* ── 미국 히트맵 (섹터별 트리맵) ── */}
         <div style={{marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <h3 style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',margin:0}}>🇺🇸 미국 섹터별 히트맵 (타일 크기 = 시총 비례)</h3>
           <span style={{fontSize:10,color:'#475569',fontFamily:'monospace'}}>클릭 시 Yahoo Finance</span>
         </div>
         <div className="card" style={{marginBottom:16, overflow:'hidden'}}>
-          <Treemap
-            items={usTreemapData}
-            width={treemapWidth - 28}
-            height={320}
+          <SectorTreemapGrid
+            sectors={usSectorsWithChg}
+            totalWidth={treemapWidth - 28}
             onTileClick={(t) => window.open(`https://finance.yahoo.com/quote/${t.sym}`, '_blank')}
           />
           <div style={{display:'flex',alignItems:'center',gap:4,marginTop:12,paddingTop:10,borderTop:'1px solid #1e293b',justifyContent:'center',flexWrap:'wrap'}}>
