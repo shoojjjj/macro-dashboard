@@ -7,28 +7,20 @@ const US_SECTORS = [
     {sym:'NVDA',label:'NVDA',mcap:3200},
     {sym:'AVGO',label:'AVGO',mcap:900},
     {sym:'AMD',label:'AMD',mcap:290},
-    {sym:'QCOM',label:'QCOM',mcap:190},
-    {sym:'MU',label:'MU',mcap:120},
   ]},
   { sector:'빅테크', items:[
     {sym:'AAPL',label:'AAPL',mcap:3100},
     {sym:'MSFT',label:'MSFT',mcap:2900},
-    {sym:'AMZN',label:'AMZN',mcap:2200},
     {sym:'GOOGL',label:'GOOGL',mcap:2100},
-    {sym:'META',label:'META',mcap:1600},
   ]},
   { sector:'금융', items:[
     {sym:'JPM',label:'JPM',mcap:720},
     {sym:'V',label:'V',mcap:640},
-    {sym:'BAC',label:'BAC',mcap:350},
-    {sym:'GS',label:'GS',mcap:190},
     {sym:'MA',label:'MA',mcap:480},
   ]},
   { sector:'헬스케어/필수소비', items:[
     {sym:'UNH',label:'UNH',mcap:520},
     {sym:'WMT',label:'WMT',mcap:780},
-    {sym:'XOM',label:'XOM',mcap:480},
-    {sym:'BRK-B',label:'BRK-B',mcap:1100},
     {sym:'TSLA',label:'TSLA',mcap:900},
   ]},
 ];
@@ -38,7 +30,6 @@ const KR_SECTORS = [
     {code:'005930',label:'삼성전자',mcap:350},
     {code:'000660',label:'SK하이닉스',mcap:120},
     {code:'066570',label:'LG전자',mcap:14},
-    {code:'009150',label:'삼성전기',mcap:9},
   ]},
   { sector:'자동차', items:[
     {code:'005380',label:'현대차',mcap:55},
@@ -46,16 +37,14 @@ const KR_SECTORS = [
     {code:'012330',label:'현대모비스',mcap:23},
   ]},
   { sector:'2차전지/화학', items:[
+    {code:'373220',label:'LG에너지솔루션',mcap:75},
     {code:'051910',label:'LG화학',mcap:28},
     {code:'006400',label:'삼성SDI',mcap:25},
-    {code:'373220',label:'LG에너지솔루션',mcap:75},
-    {code:'096770',label:'SK이노',mcap:15},
   ]},
   { sector:'금융/지주', items:[
-    {code:'028260',label:'삼성물산',mcap:20},
     {code:'105560',label:'KB금융',mcap:30},
     {code:'055550',label:'신한지주',mcap:24},
-    {code:'316140',label:'우리금융',mcap:12},
+    {code:'028260',label:'삼성물산',mcap:20},
   ]},
   { sector:'인터넷/엔터', items:[
     {code:'035420',label:'NAVER',mcap:38},
@@ -152,8 +141,9 @@ function squarify(items, x, y, w, h) {
 }
 
 function TreemapTile({ tile, onClick }) {
-  const showLabel = tile.w > 38 && tile.h > 24;
-  const big = tile.w > 70 && tile.h > 50;
+  const showLabel = tile.w > 30 && tile.h > 18;
+  const big = tile.w > 70 && tile.h > 45;
+  const tiny = tile.w < 50 || tile.h < 28;
   return (
     <div onClick={onClick}
       onMouseEnter={e=>e.currentTarget.style.filter='brightness(1.3)'}
@@ -163,13 +153,20 @@ function TreemapTile({ tile, onClick }) {
         background:heatColor(tile.chg), border:'1px solid #040c14',
         display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
         cursor:'pointer', transition:'filter 0.15s', overflow:'hidden', boxSizing:'border-box',
+        padding:'1px 2px',
       }}>
       {showLabel && (
         <>
-          <span style={{fontSize:big?13:10, fontWeight:800, color:'#fff', fontFamily:'monospace', textShadow:'0 1px 2px rgba(0,0,0,0.4)'}}>{tile.label}</span>
-          <span style={{fontSize:big?11:9, fontWeight:700, color:'rgba(255,255,255,0.9)', fontFamily:'monospace', marginTop:1}}>
-            {tile.chg==null?'--':`${tile.chg>=0?'+':''}${tile.chg.toFixed(2)}%`}
-          </span>
+          <span style={{
+            fontSize:big?13:(tiny?8.5:10), fontWeight:800, color:'#fff', fontFamily:'monospace',
+            textShadow:'0 1px 2px rgba(0,0,0,0.5)', whiteSpace:'nowrap',
+            overflow:'hidden', textOverflow:'ellipsis', maxWidth:tile.w-4, lineHeight:1.1,
+          }}>{tile.label}</span>
+          {tile.h > 24 && (
+            <span style={{fontSize:big?11:(tiny?8:9), fontWeight:700, color:'rgba(255,255,255,0.92)', fontFamily:'monospace', marginTop:1}}>
+              {tile.chg==null?'--':`${tile.chg>=0?'+':''}${tile.chg.toFixed(2)}%`}
+            </span>
+          )}
         </>
       )}
     </div>
@@ -195,7 +192,7 @@ function SectorTreemapGrid({ sectors, totalWidth, cols=2, onTileClick }) {
       {sectors.map(sec => (
         <div key={sec.sector}>
           <div style={{fontSize:9,fontWeight:700,color:'#7d8aa0',textTransform:'uppercase',marginBottom:3,letterSpacing:'0.05em',background:'#0f1929',padding:'3px 6px',borderRadius:'4px 4px 0 0'}}>{sec.sector}</div>
-          <Treemap items={sec.items} width={colWidth} height={110} onTileClick={onTileClick}/>
+          <Treemap items={sec.items} width={colWidth} height={140} onTileClick={onTileClick}/>
         </div>
       ))}
     </div>
