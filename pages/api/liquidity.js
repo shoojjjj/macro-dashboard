@@ -1,6 +1,66 @@
 // pages/api/liquidity.js
-// FRED API로 Fed 총자산 / TGA / RRP / MMF 실시간 조회
+// FRED API로 Fed 총자산 / TGA / RRP / MMF 조회
 // Net Liquidity = Fed Assets - TGA - RRP
+
+const SERIES = {
+  fed: 'WALCL',
+  tga: 'WTREGEN',
+  rrp: 'RRPONTSYD',
+  mmf: 'WRMFSL',
+};
+
+const PERIOD_CONFIG = {
+  day: { limit: 30, slice: 10, label: '최근 10주 (일간 스냅샷)' },
+  week: { limit: 52, slice: 12, label: '최근 12주' },
+  month: { limit: 156, slice: 12, label: '최근 12개월' },
+};
+
+const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
+
+async function fetchSeries(seriesId, limit, apiKey) {
+  const url = `${FRED_BASE}?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`FRED ${seriesId} error: ${r.status}`);
+  const d = await r.json();
+  return d.observations
+    .filter((o) => o.value !== '.')
+    .map((o) => ({ date: o.date, value: parseFloat(o.value) }))
+    .reverse();
+}
+
+function toTrillions(value, unit) {
+  if (unit === 'millions') return +(value / 1_000_000).toFixed(3);
+  return +(value / 1_000).toFixed(3);
+}
+
+function alignWeeklySeries(fedData, tgaData, rrpData, slice) {
+  const rrpByDate = new Map(rrpData.map((d) => [d.date, d.value]));
+  const points = fedData.map((f, i) => {
+    const tga = tgaData[i]?.value ?? tgaData.at(-1)?.value ?? 0;
+    const rrpEntry = rrpData.find((r) => r.date <= f.date) ?? rrpData.at(-1);
+    const rrp = rrpEntry?.value ?? 0;
+    const fedT = toTrillions(f.value, 'millions');
+    const tgaT = toTrillions(tga, 'millions');
+    const rrpT = toTrillions(rrp, 'billions');
+    return {
+      x: f.date,
+      fed: fedT,
+      tga: tgaT,
+      rrp: rrpT,
+      net: +(fedT - tgaT - rrpT).toFixed(3),
+    };
+  });
+  return points.slice(-slice);
+}
+
+function aggregateMonthly(points) {
+  const buckets = new Map();
+  for (const p of points) {
+    const key = p.x.slice(0, 7);
+    buckets.set(key, p);
+  }
+  return [...buckets.values()];
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=300');
@@ -10,77 +70,46 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'FRED_API_KEY not set' });
   }
 
-  // FRED 시리즈 ID
-  const SERIES = {
-    fed:  'WALCL',    // Fed 총자산 (Millions USD, 주간)
-    tga:  'WTREGEN',  // TGA 재무부 일반계정 (Millions USD, 주간)
-    rrp:  'RRPONTSYD',// RRP 역레포 잔고 (Billions USD, 일간)
-    mmf:  'WRMFSL',   // MMF 잔고 (Billions USD, 주간)
-  };
-
-  const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
-
-  // 최근 30개 데이터 포인트 가져오기
-  async function fetchSeries(seriesId, limit = 30) {
-    const url = `${FRED_BASE}?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=${limit}`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`FRED ${seriesId} error: ${r.status}`);
-    const d = await r.json();
-    // 오래된 순으로 정렬, 숫자로 변환
-    return d.observations
-      .filter(o => o.value !== '.')
-      .map(o => ({ date: o.date, value: parseFloat(o.value) }))
-      .reverse();
-  }
+  const period = ['day', 'week', 'month'].includes(req.query.period) ? req.query.period : 'week';
+  const cfg = PERIOD_CONFIG[period];
 
   try {
     const [fedData, tgaData, rrpData, mmfData] = await Promise.all([
-      fetchSeries(SERIES.fed, 30),
-      fetchSeries(SERIES.tga, 30),
-      fetchSeries(SERIES.rrp, 30),
-      fetchSeries(SERIES.mmf, 30),
+      fetchSeries(SERIES.fed, cfg.limit, FRED_KEY),
+      fetchSeries(SERIES.tga, cfg.limit, FRED_KEY),
+      fetchSeries(SERIES.rrp, cfg.limit, FRED_KEY),
+      fetchSeries(SERIES.mmf, cfg.limit, FRED_KEY),
     ]);
 
-    // 최신값 (Millions → Trillions 변환)
-    const latestFed = fedData.at(-1)?.value / 1_000_000 ?? null;  // Millions → Trillions
-    const latestTga = tgaData.at(-1)?.value / 1_000_000 ?? null;
-    const latestRrp = rrpData.at(-1)?.value / 1_000 ?? null;       // Billions → Trillions
-    const latestMmf = mmfData.at(-1)?.value / 1_000 ?? null;
+    let aligned = alignWeeklySeries(fedData, tgaData, rrpData, period === 'month' ? 52 : cfg.slice);
+    if (period === 'month') aligned = aggregateMonthly(aligned).slice(-12);
 
-    // Net Liquidity = Fed - TGA - RRP
-    const netLiquidity = (latestFed !== null && latestTga !== null && latestRrp !== null)
+    const latestFed = fedData.at(-1)?.value / 1_000_000 ?? null;
+    const latestTga = tgaData.at(-1)?.value / 1_000_000 ?? null;
+    const latestRrp = rrpData.at(-1)?.value / 1_000 ?? null;
+    const latestMmf = mmfData.at(-1)?.value / 1_000 ?? null;
+    const netLiquidity = (latestFed != null && latestTga != null && latestRrp != null)
       ? latestFed - latestTga - latestRrp
       : null;
 
-    // 차트용 시계열 (주간 기준, 최근 12주)
-    const weeklyFed = fedData.slice(-12).map(d => ({ x: d.date, y: +(d.value / 1_000_000).toFixed(3) }));
-    const weeklyTga = tgaData.slice(-12).map(d => ({ x: d.date, y: +(d.value / 1_000_000).toFixed(3) }));
-    const weeklyRrp = rrpData.slice(-12).map(d => ({ x: d.date, y: +(d.value / 1_000).toFixed(3) }));
-
-    // Net Liquidity 시계열 (Fed/TGA 날짜 기준 교차 계산)
-    const netSeries = weeklyFed.map((f, i) => {
-      const t = weeklyTga[i]?.y ?? 0;
-      const r = weeklyRrp[i]?.y ?? 0;
-      return { x: f.x, y: +(f.y - t - r).toFixed(3) };
-    });
-
     res.status(200).json({
+      period,
+      periodLabel: cfg.label,
       current: {
-        fed:          latestFed ? +latestFed.toFixed(3) : null,
-        tga:          latestTga ? +latestTga.toFixed(3) : null,
-        rrp:          latestRrp ? +latestRrp.toFixed(3) : null,
-        mmf:          latestMmf ? +latestMmf.toFixed(3) : null,
-        netLiquidity: netLiquidity ? +netLiquidity.toFixed(3) : null,
+        fed: latestFed != null ? +latestFed.toFixed(3) : null,
+        tga: latestTga != null ? +latestTga.toFixed(3) : null,
+        rrp: latestRrp != null ? +latestRrp.toFixed(3) : null,
+        mmf: latestMmf != null ? +latestMmf.toFixed(3) : null,
+        netLiquidity: netLiquidity != null ? +netLiquidity.toFixed(3) : null,
       },
       series: {
-        fed:  weeklyFed,
-        tga:  weeklyTga,
-        rrp:  weeklyRrp,
-        net:  netSeries,
+        net: aligned.map((p) => ({ x: p.x, y: p.net })),
+        fed: aligned.map((p) => ({ x: p.x, y: p.fed })),
+        tga: aligned.map((p) => ({ x: p.x, y: p.tga })),
+        rrp: aligned.map((p) => ({ x: p.x, y: p.rrp })),
       },
       updatedAt: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('Liquidity API Error:', error);
     res.status(500).json({ error: error.message });
