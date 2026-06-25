@@ -261,7 +261,7 @@ export default function Dashboard() {
 
   const fetchStockAndHeatmap = useCallback(async () => {
     try {
-      const r = await fetch('/api/stock');
+      const r = await fetch(`/api/stock?_t=${Date.now()}`, { cache: 'no-store' });
       const d = await r.json();
       setStock(d);
       const usMap = {};
