@@ -1088,6 +1088,8 @@ function metricsToForm(metrics) {
       out[k] = metrics[k] == null ? '' : metrics[k] ? '1' : '0';
     } else if (metrics[k] == null) {
       out[k] = '';
+    } else if (k === 'peg') {
+      out[k] = (Math.round(metrics[k] * 10) / 10).toFixed(1);
     } else {
       out[k] = String(round3(metrics[k]));
     }
