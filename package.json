@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "fetch:kr-universe": "node scripts/fetch_kr_index_universe.mjs"
   },
   "dependencies": {
     "next": "15.3.6",

@@ -1,0 +1,1755 @@
+{
+  "updatedAt": "2026-06-29T12:12:51.566Z",
+  "note": "KOSPI200=네이버 KPI200 구성종목, KOSDAQ150=코스닥 시가총액 상위 150 (코스닥150 지수 근사)",
+  "sources": {
+    "kospi200": 199,
+    "kosdaq150": 150
+  },
+  "items": [
+    {
+      "code": "000080",
+      "label": "하이트진로",
+      "aliases": []
+    },
+    {
+      "code": "000100",
+      "label": "유한양행",
+      "aliases": []
+    },
+    {
+      "code": "000120",
+      "label": "CJ대한통운",
+      "aliases": []
+    },
+    {
+      "code": "000150",
+      "label": "두산",
+      "aliases": []
+    },
+    {
+      "code": "000210",
+      "label": "DL",
+      "aliases": []
+    },
+    {
+      "code": "000240",
+      "label": "한국앤컴퍼니",
+      "aliases": []
+    },
+    {
+      "code": "000250",
+      "label": "삼천당제약",
+      "aliases": []
+    },
+    {
+      "code": "000270",
+      "label": "기아",
+      "aliases": []
+    },
+    {
+      "code": "000660",
+      "label": "SK하이닉스",
+      "aliases": []
+    },
+    {
+      "code": "000670",
+      "label": "영풍",
+      "aliases": []
+    },
+    {
+      "code": "000720",
+      "label": "현대건설",
+      "aliases": []
+    },
+    {
+      "code": "000810",
+      "label": "삼성화재",
+      "aliases": []
+    },
+    {
+      "code": "000880",
+      "label": "한화",
+      "aliases": []
+    },
+    {
+      "code": "000990",
+      "label": "DB하이텍",
+      "aliases": []
+    },
+    {
+      "code": "001040",
+      "label": "CJ",
+      "aliases": []
+    },
+    {
+      "code": "001430",
+      "label": "세아베스틸지주",
+      "aliases": []
+    },
+    {
+      "code": "001440",
+      "label": "대한전선",
+      "aliases": []
+    },
+    {
+      "code": "001450",
+      "label": "현대해상",
+      "aliases": []
+    },
+    {
+      "code": "001680",
+      "label": "대상",
+      "aliases": []
+    },
+    {
+      "code": "001800",
+      "label": "오리온홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "002030",
+      "label": "아세아",
+      "aliases": []
+    },
+    {
+      "code": "002380",
+      "label": "KCC",
+      "aliases": []
+    },
+    {
+      "code": "002790",
+      "label": "아모레퍼시픽홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "002840",
+      "label": "미원상사",
+      "aliases": []
+    },
+    {
+      "code": "003030",
+      "label": "세아제강지주",
+      "aliases": []
+    },
+    {
+      "code": "003090",
+      "label": "대웅",
+      "aliases": []
+    },
+    {
+      "code": "003230",
+      "label": "삼양식품",
+      "aliases": []
+    },
+    {
+      "code": "003240",
+      "label": "태광산업",
+      "aliases": []
+    },
+    {
+      "code": "003380",
+      "label": "하림지주",
+      "aliases": []
+    },
+    {
+      "code": "003490",
+      "label": "대한항공",
+      "aliases": []
+    },
+    {
+      "code": "003550",
+      "label": "LG",
+      "aliases": []
+    },
+    {
+      "code": "003670",
+      "label": "포스코퓨처엠",
+      "aliases": []
+    },
+    {
+      "code": "004000",
+      "label": "롯데정밀화학",
+      "aliases": []
+    },
+    {
+      "code": "004020",
+      "label": "현대제철",
+      "aliases": []
+    },
+    {
+      "code": "004170",
+      "label": "신세계",
+      "aliases": []
+    },
+    {
+      "code": "004370",
+      "label": "농심",
+      "aliases": []
+    },
+    {
+      "code": "004990",
+      "label": "롯데지주",
+      "aliases": []
+    },
+    {
+      "code": "005290",
+      "label": "동진쎄미켐",
+      "aliases": []
+    },
+    {
+      "code": "005300",
+      "label": "롯데칠성",
+      "aliases": []
+    },
+    {
+      "code": "005380",
+      "label": "현대차",
+      "aliases": []
+    },
+    {
+      "code": "005420",
+      "label": "코스모화학",
+      "aliases": []
+    },
+    {
+      "code": "005490",
+      "label": "POSCO홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "005830",
+      "label": "DB손해보험",
+      "aliases": []
+    },
+    {
+      "code": "005850",
+      "label": "에스엘",
+      "aliases": []
+    },
+    {
+      "code": "005930",
+      "label": "삼성전자",
+      "aliases": []
+    },
+    {
+      "code": "005940",
+      "label": "NH투자증권",
+      "aliases": []
+    },
+    {
+      "code": "006040",
+      "label": "동원산업",
+      "aliases": []
+    },
+    {
+      "code": "006260",
+      "label": "LS",
+      "aliases": []
+    },
+    {
+      "code": "006280",
+      "label": "녹십자",
+      "aliases": []
+    },
+    {
+      "code": "006400",
+      "label": "삼성SDI",
+      "aliases": []
+    },
+    {
+      "code": "006650",
+      "label": "대한유화",
+      "aliases": []
+    },
+    {
+      "code": "006730",
+      "label": "서부T&D",
+      "aliases": []
+    },
+    {
+      "code": "006800",
+      "label": "미래에셋증권",
+      "aliases": []
+    },
+    {
+      "code": "007070",
+      "label": "GS리테일",
+      "aliases": []
+    },
+    {
+      "code": "007310",
+      "label": "오뚜기",
+      "aliases": []
+    },
+    {
+      "code": "007340",
+      "label": "DN오토모티브",
+      "aliases": []
+    },
+    {
+      "code": "007390",
+      "label": "네이처셀",
+      "aliases": []
+    },
+    {
+      "code": "007660",
+      "label": "이수페타시스",
+      "aliases": []
+    },
+    {
+      "code": "008730",
+      "label": "율촌화학",
+      "aliases": []
+    },
+    {
+      "code": "008770",
+      "label": "호텔신라",
+      "aliases": []
+    },
+    {
+      "code": "008930",
+      "label": "한미사이언스",
+      "aliases": []
+    },
+    {
+      "code": "009150",
+      "label": "삼성전기",
+      "aliases": []
+    },
+    {
+      "code": "009240",
+      "label": "한샘",
+      "aliases": []
+    },
+    {
+      "code": "009420",
+      "label": "한올바이오파마",
+      "aliases": []
+    },
+    {
+      "code": "009540",
+      "label": "HD한국조선해양",
+      "aliases": []
+    },
+    {
+      "code": "009830",
+      "label": "한화솔루션",
+      "aliases": []
+    },
+    {
+      "code": "009970",
+      "label": "영원무역홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "010060",
+      "label": "OCI홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "010120",
+      "label": "LS ELECTRIC",
+      "aliases": []
+    },
+    {
+      "code": "010130",
+      "label": "고려아연",
+      "aliases": []
+    },
+    {
+      "code": "010140",
+      "label": "삼성중공업",
+      "aliases": []
+    },
+    {
+      "code": "010170",
+      "label": "대한광통신",
+      "aliases": []
+    },
+    {
+      "code": "010950",
+      "label": "S-Oil",
+      "aliases": []
+    },
+    {
+      "code": "011070",
+      "label": "LG이노텍",
+      "aliases": []
+    },
+    {
+      "code": "011170",
+      "label": "롯데케미칼",
+      "aliases": []
+    },
+    {
+      "code": "011200",
+      "label": "HMM",
+      "aliases": []
+    },
+    {
+      "code": "011210",
+      "label": "현대위아",
+      "aliases": []
+    },
+    {
+      "code": "011780",
+      "label": "금호석유화학",
+      "aliases": []
+    },
+    {
+      "code": "011790",
+      "label": "SKC",
+      "aliases": []
+    },
+    {
+      "code": "012330",
+      "label": "현대모비스",
+      "aliases": []
+    },
+    {
+      "code": "012450",
+      "label": "한화에어로스페이스",
+      "aliases": []
+    },
+    {
+      "code": "012750",
+      "label": "에스원",
+      "aliases": []
+    },
+    {
+      "code": "014620",
+      "label": "성광벤드",
+      "aliases": []
+    },
+    {
+      "code": "014680",
+      "label": "한솔케미칼",
+      "aliases": []
+    },
+    {
+      "code": "014820",
+      "label": "동원시스템즈",
+      "aliases": []
+    },
+    {
+      "code": "015760",
+      "label": "한국전력",
+      "aliases": []
+    },
+    {
+      "code": "016360",
+      "label": "삼성증권",
+      "aliases": []
+    },
+    {
+      "code": "017670",
+      "label": "SK텔레콤",
+      "aliases": []
+    },
+    {
+      "code": "017800",
+      "label": "현대엘리베이터",
+      "aliases": []
+    },
+    {
+      "code": "017960",
+      "label": "한국카본",
+      "aliases": []
+    },
+    {
+      "code": "018260",
+      "label": "삼성에스디에스",
+      "aliases": []
+    },
+    {
+      "code": "018880",
+      "label": "한온시스템",
+      "aliases": []
+    },
+    {
+      "code": "019210",
+      "label": "와이지-원",
+      "aliases": []
+    },
+    {
+      "code": "021240",
+      "label": "코웨이",
+      "aliases": []
+    },
+    {
+      "code": "022100",
+      "label": "포스코DX",
+      "aliases": []
+    },
+    {
+      "code": "023160",
+      "label": "태광",
+      "aliases": []
+    },
+    {
+      "code": "023530",
+      "label": "롯데쇼핑",
+      "aliases": []
+    },
+    {
+      "code": "024110",
+      "label": "기업은행",
+      "aliases": []
+    },
+    {
+      "code": "026960",
+      "label": "동서",
+      "aliases": []
+    },
+    {
+      "code": "028050",
+      "label": "삼성E&A",
+      "aliases": []
+    },
+    {
+      "code": "028260",
+      "label": "삼성물산",
+      "aliases": []
+    },
+    {
+      "code": "028300",
+      "label": "HLB",
+      "aliases": []
+    },
+    {
+      "code": "028670",
+      "label": "팬오션",
+      "aliases": []
+    },
+    {
+      "code": "029780",
+      "label": "삼성카드",
+      "aliases": []
+    },
+    {
+      "code": "030000",
+      "label": "제일기획",
+      "aliases": []
+    },
+    {
+      "code": "030200",
+      "label": "KT",
+      "aliases": []
+    },
+    {
+      "code": "030530",
+      "label": "원익홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "031330",
+      "label": "에스에이엠티",
+      "aliases": []
+    },
+    {
+      "code": "031980",
+      "label": "피에스케이홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "032190",
+      "label": "다우데이타",
+      "aliases": []
+    },
+    {
+      "code": "032500",
+      "label": "케이엠더블유",
+      "aliases": []
+    },
+    {
+      "code": "032640",
+      "label": "LG유플러스",
+      "aliases": []
+    },
+    {
+      "code": "032820",
+      "label": "우리기술",
+      "aliases": []
+    },
+    {
+      "code": "032830",
+      "label": "삼성생명",
+      "aliases": []
+    },
+    {
+      "code": "033100",
+      "label": "제룡전기",
+      "aliases": []
+    },
+    {
+      "code": "033780",
+      "label": "KT&G",
+      "aliases": []
+    },
+    {
+      "code": "033790",
+      "label": "피노",
+      "aliases": []
+    },
+    {
+      "code": "034020",
+      "label": "두산에너빌리티",
+      "aliases": []
+    },
+    {
+      "code": "034220",
+      "label": "LG디스플레이",
+      "aliases": []
+    },
+    {
+      "code": "034230",
+      "label": "파라다이스",
+      "aliases": []
+    },
+    {
+      "code": "034730",
+      "label": "SK",
+      "aliases": []
+    },
+    {
+      "code": "035250",
+      "label": "강원랜드",
+      "aliases": []
+    },
+    {
+      "code": "035420",
+      "label": "NAVER",
+      "aliases": []
+    },
+    {
+      "code": "035720",
+      "label": "카카오",
+      "aliases": []
+    },
+    {
+      "code": "035760",
+      "label": "CJ ENM",
+      "aliases": []
+    },
+    {
+      "code": "035900",
+      "label": "JYP Ent.",
+      "aliases": []
+    },
+    {
+      "code": "036460",
+      "label": "한국가스공사",
+      "aliases": []
+    },
+    {
+      "code": "036540",
+      "label": "SFA반도체",
+      "aliases": []
+    },
+    {
+      "code": "036570",
+      "label": "NC",
+      "aliases": []
+    },
+    {
+      "code": "036830",
+      "label": "솔브레인홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "036930",
+      "label": "주성엔지니어링",
+      "aliases": []
+    },
+    {
+      "code": "038500",
+      "label": "삼표시멘트",
+      "aliases": []
+    },
+    {
+      "code": "039030",
+      "label": "이오테크닉스",
+      "aliases": []
+    },
+    {
+      "code": "039200",
+      "label": "오스코텍",
+      "aliases": []
+    },
+    {
+      "code": "039490",
+      "label": "키움증권",
+      "aliases": []
+    },
+    {
+      "code": "041510",
+      "label": "에스엠",
+      "aliases": []
+    },
+    {
+      "code": "041830",
+      "label": "인바디",
+      "aliases": []
+    },
+    {
+      "code": "042660",
+      "label": "한화오션",
+      "aliases": []
+    },
+    {
+      "code": "042700",
+      "label": "한미반도체",
+      "aliases": []
+    },
+    {
+      "code": "043260",
+      "label": "성호전자",
+      "aliases": []
+    },
+    {
+      "code": "044490",
+      "label": "태웅",
+      "aliases": []
+    },
+    {
+      "code": "046890",
+      "label": "서울반도체",
+      "aliases": []
+    },
+    {
+      "code": "047040",
+      "label": "대우건설",
+      "aliases": []
+    },
+    {
+      "code": "047050",
+      "label": "포스코인터내셔널",
+      "aliases": []
+    },
+    {
+      "code": "047810",
+      "label": "한국항공우주",
+      "aliases": []
+    },
+    {
+      "code": "048410",
+      "label": "현대바이오",
+      "aliases": []
+    },
+    {
+      "code": "050890",
+      "label": "쏠리드",
+      "aliases": []
+    },
+    {
+      "code": "051600",
+      "label": "한전KPS",
+      "aliases": []
+    },
+    {
+      "code": "051900",
+      "label": "LG생활건강",
+      "aliases": []
+    },
+    {
+      "code": "051910",
+      "label": "LG화학",
+      "aliases": []
+    },
+    {
+      "code": "052020",
+      "label": "에스티큐브",
+      "aliases": []
+    },
+    {
+      "code": "052400",
+      "label": "코나아이",
+      "aliases": []
+    },
+    {
+      "code": "052690",
+      "label": "한전기술",
+      "aliases": []
+    },
+    {
+      "code": "053610",
+      "label": "프로텍",
+      "aliases": []
+    },
+    {
+      "code": "053800",
+      "label": "안랩",
+      "aliases": []
+    },
+    {
+      "code": "055550",
+      "label": "신한지주",
+      "aliases": []
+    },
+    {
+      "code": "056190",
+      "label": "SFA",
+      "aliases": []
+    },
+    {
+      "code": "058470",
+      "label": "리노공업",
+      "aliases": []
+    },
+    {
+      "code": "058610",
+      "label": "에스피지",
+      "aliases": []
+    },
+    {
+      "code": "059090",
+      "label": "미코",
+      "aliases": []
+    },
+    {
+      "code": "060370",
+      "label": "LS마린솔루션",
+      "aliases": []
+    },
+    {
+      "code": "062040",
+      "label": "산일전기",
+      "aliases": []
+    },
+    {
+      "code": "064350",
+      "label": "현대로템",
+      "aliases": []
+    },
+    {
+      "code": "064400",
+      "label": "LG씨엔에스",
+      "aliases": []
+    },
+    {
+      "code": "064760",
+      "label": "티씨케이",
+      "aliases": []
+    },
+    {
+      "code": "065350",
+      "label": "신성델타테크",
+      "aliases": []
+    },
+    {
+      "code": "066570",
+      "label": "LG전자",
+      "aliases": []
+    },
+    {
+      "code": "066970",
+      "label": "엘앤에프",
+      "aliases": []
+    },
+    {
+      "code": "067310",
+      "label": "하나마이크론",
+      "aliases": []
+    },
+    {
+      "code": "068270",
+      "label": "셀트리온",
+      "aliases": []
+    },
+    {
+      "code": "068760",
+      "label": "셀트리온제약",
+      "aliases": []
+    },
+    {
+      "code": "069260",
+      "label": "TKG휴켐스",
+      "aliases": []
+    },
+    {
+      "code": "069620",
+      "label": "대웅제약",
+      "aliases": []
+    },
+    {
+      "code": "069960",
+      "label": "현대백화점",
+      "aliases": []
+    },
+    {
+      "code": "071050",
+      "label": "한국금융지주",
+      "aliases": []
+    },
+    {
+      "code": "071320",
+      "label": "지역난방공사",
+      "aliases": []
+    },
+    {
+      "code": "071970",
+      "label": "HD현대마린엔진",
+      "aliases": []
+    },
+    {
+      "code": "073240",
+      "label": "금호타이어",
+      "aliases": []
+    },
+    {
+      "code": "074600",
+      "label": "원익QnC",
+      "aliases": []
+    },
+    {
+      "code": "078600",
+      "label": "대주전자재료",
+      "aliases": []
+    },
+    {
+      "code": "078930",
+      "label": "GS",
+      "aliases": []
+    },
+    {
+      "code": "079550",
+      "label": "LIG디펜스앤에어로스페이스",
+      "aliases": []
+    },
+    {
+      "code": "080220",
+      "label": "제주반도체",
+      "aliases": []
+    },
+    {
+      "code": "081660",
+      "label": "미스토홀딩스",
+      "aliases": []
+    },
+    {
+      "code": "082740",
+      "label": "한화엔진",
+      "aliases": []
+    },
+    {
+      "code": "082920",
+      "label": "비츠로셀",
+      "aliases": []
+    },
+    {
+      "code": "083450",
+      "label": "GST",
+      "aliases": []
+    },
+    {
+      "code": "083650",
+      "label": "비에이치아이",
+      "aliases": []
+    },
+    {
+      "code": "084370",
+      "label": "유진테크",
+      "aliases": []
+    },
+    {
+      "code": "085660",
+      "label": "차바이오텍",
+      "aliases": []
+    },
+    {
+      "code": "086280",
+      "label": "현대글로비스",
+      "aliases": []
+    },
+    {
+      "code": "086450",
+      "label": "동국제약",
+      "aliases": []
+    },
+    {
+      "code": "086520",
+      "label": "에코프로",
+      "aliases": []
+    },
+    {
+      "code": "086790",
+      "label": "하나금융지주",
+      "aliases": []
+    },
+    {
+      "code": "086900",
+      "label": "메디톡스",
+      "aliases": []
+    },
+    {
+      "code": "087010",
+      "label": "펩트론",
+      "aliases": []
+    },
+    {
+      "code": "088350",
+      "label": "한화생명",
+      "aliases": []
+    },
+    {
+      "code": "089030",
+      "label": "테크윙",
+      "aliases": []
+    },
+    {
+      "code": "089970",
+      "label": "브이엠",
+      "aliases": []
+    },
+    {
+      "code": "090360",
+      "label": "로보스타",
+      "aliases": []
+    },
+    {
+      "code": "090430",
+      "label": "아모레퍼시픽",
+      "aliases": []
+    },
+    {
+      "code": "090710",
+      "label": "휴림로봇",
+      "aliases": []
+    },
+    {
+      "code": "093370",
+      "label": "후성",
+      "aliases": []
+    },
+    {
+      "code": "094170",
+      "label": "동운아나텍",
+      "aliases": []
+    },
+    {
+      "code": "095340",
+      "label": "ISC",
+      "aliases": []
+    },
+    {
+      "code": "095610",
+      "label": "테스",
+      "aliases": []
+    },
+    {
+      "code": "096530",
+      "label": "씨젠",
+      "aliases": []
+    },
+    {
+      "code": "096770",
+      "label": "SK이노베이션",
+      "aliases": []
+    },
+    {
+      "code": "097950",
+      "label": "CJ제일제당",
+      "aliases": []
+    },
+    {
+      "code": "098460",
+      "label": "고영",
+      "aliases": []
+    },
+    {
+      "code": "099320",
+      "label": "쎄트렉아이",
+      "aliases": []
+    },
+    {
+      "code": "100790",
+      "label": "미래에셋벤처투자",
+      "aliases": []
+    },
+    {
+      "code": "101490",
+      "label": "에스앤에스텍",
+      "aliases": []
+    },
+    {
+      "code": "102710",
+      "label": "이엔에프테크놀로지",
+      "aliases": []
+    },
+    {
+      "code": "103140",
+      "label": "풍산",
+      "aliases": []
+    },
+    {
+      "code": "105560",
+      "label": "KB금융",
+      "aliases": []
+    },
+    {
+      "code": "108490",
+      "label": "로보티즈",
+      "aliases": []
+    },
+    {
+      "code": "111770",
+      "label": "영원무역",
+      "aliases": []
+    },
+    {
+      "code": "112610",
+      "label": "씨에스윈드",
+      "aliases": []
+    },
+    {
+      "code": "115180",
+      "label": "큐리언트",
+      "aliases": []
+    },
+    {
+      "code": "120110",
+      "label": "코오롱인더",
+      "aliases": []
+    },
+    {
+      "code": "121600",
+      "label": "나노신소재",
+      "aliases": []
+    },
+    {
+      "code": "122640",
+      "label": "예스티",
+      "aliases": []
+    },
+    {
+      "code": "122870",
+      "label": "와이지엔터테인먼트",
+      "aliases": []
+    },
+    {
+      "code": "126340",
+      "label": "비나텍",
+      "aliases": []
+    },
+    {
+      "code": "127120",
+      "label": "제이에스링크",
+      "aliases": []
+    },
+    {
+      "code": "128940",
+      "label": "한미약품",
+      "aliases": []
+    },
+    {
+      "code": "131290",
+      "label": "티에스이",
+      "aliases": []
+    },
+    {
+      "code": "131970",
+      "label": "두산테스나",
+      "aliases": []
+    },
+    {
+      "code": "137310",
+      "label": "에스디바이오센서",
+      "aliases": []
+    },
+    {
+      "code": "137400",
+      "label": "피엔티",
+      "aliases": []
+    },
+    {
+      "code": "138040",
+      "label": "메리츠금융지주",
+      "aliases": []
+    },
+    {
+      "code": "138930",
+      "label": "BNK금융지주",
+      "aliases": []
+    },
+    {
+      "code": "139130",
+      "label": "iM금융지주",
+      "aliases": []
+    },
+    {
+      "code": "139480",
+      "label": "이마트",
+      "aliases": []
+    },
+    {
+      "code": "140410",
+      "label": "메지온",
+      "aliases": []
+    },
+    {
+      "code": "140860",
+      "label": "파크시스템스",
+      "aliases": []
+    },
+    {
+      "code": "141080",
+      "label": "리가켐바이오",
+      "aliases": []
+    },
+    {
+      "code": "145020",
+      "label": "휴젤",
+      "aliases": []
+    },
+    {
+      "code": "160190",
+      "label": "하이젠알앤엠",
+      "aliases": []
+    },
+    {
+      "code": "161390",
+      "label": "한국타이어앤테크놀로지",
+      "aliases": []
+    },
+    {
+      "code": "161580",
+      "label": "필옵틱스",
+      "aliases": []
+    },
+    {
+      "code": "161890",
+      "label": "한국콜마",
+      "aliases": []
+    },
+    {
+      "code": "166090",
+      "label": "하나머티리얼즈",
+      "aliases": []
+    },
+    {
+      "code": "171090",
+      "label": "선익시스템",
+      "aliases": []
+    },
+    {
+      "code": "174900",
+      "label": "앱클론",
+      "aliases": []
+    },
+    {
+      "code": "175330",
+      "label": "JB금융지주",
+      "aliases": []
+    },
+    {
+      "code": "178320",
+      "label": "서진시스템",
+      "aliases": []
+    },
+    {
+      "code": "180640",
+      "label": "한진칼",
+      "aliases": []
+    },
+    {
+      "code": "183300",
+      "label": "코미코",
+      "aliases": []
+    },
+    {
+      "code": "185750",
+      "label": "종근당",
+      "aliases": []
+    },
+    {
+      "code": "189300",
+      "label": "인텔리안테크",
+      "aliases": []
+    },
+    {
+      "code": "192080",
+      "label": "더블유게임즈",
+      "aliases": []
+    },
+    {
+      "code": "192820",
+      "label": "코스맥스",
+      "aliases": []
+    },
+    {
+      "code": "195940",
+      "label": "HK이노엔",
+      "aliases": []
+    },
+    {
+      "code": "196170",
+      "label": "알테오젠",
+      "aliases": []
+    },
+    {
+      "code": "204270",
+      "label": "제이앤티씨",
+      "aliases": []
+    },
+    {
+      "code": "204320",
+      "label": "HL만도",
+      "aliases": []
+    },
+    {
+      "code": "207940",
+      "label": "삼성바이오로직스",
+      "aliases": []
+    },
+    {
+      "code": "213420",
+      "label": "덕산네오룩스",
+      "aliases": []
+    },
+    {
+      "code": "214150",
+      "label": "클래시스",
+      "aliases": []
+    },
+    {
+      "code": "214370",
+      "label": "케어젠",
+      "aliases": []
+    },
+    {
+      "code": "214450",
+      "label": "파마리서치",
+      "aliases": []
+    },
+    {
+      "code": "218410",
+      "label": "RFHIC",
+      "aliases": []
+    },
+    {
+      "code": "222080",
+      "label": "SFA넥셀",
+      "aliases": []
+    },
+    {
+      "code": "222800",
+      "label": "심텍",
+      "aliases": []
+    },
+    {
+      "code": "226950",
+      "label": "올릭스",
+      "aliases": []
+    },
+    {
+      "code": "232140",
+      "label": "와이씨",
+      "aliases": []
+    },
+    {
+      "code": "237690",
+      "label": "에스티팜",
+      "aliases": []
+    },
+    {
+      "code": "240810",
+      "label": "원익IPS",
+      "aliases": []
+    },
+    {
+      "code": "241560",
+      "label": "두산밥캣",
+      "aliases": []
+    },
+    {
+      "code": "241710",
+      "label": "코스메카코리아",
+      "aliases": []
+    },
+    {
+      "code": "247540",
+      "label": "에코프로비엠",
+      "aliases": []
+    },
+    {
+      "code": "251270",
+      "label": "넷마블",
+      "aliases": []
+    },
+    {
+      "code": "252990",
+      "label": "샘씨엔에스",
+      "aliases": []
+    },
+    {
+      "code": "253450",
+      "label": "스튜디오드래곤",
+      "aliases": []
+    },
+    {
+      "code": "257720",
+      "label": "실리콘투",
+      "aliases": []
+    },
+    {
+      "code": "259960",
+      "label": "크래프톤",
+      "aliases": []
+    },
+    {
+      "code": "263750",
+      "label": "펄어비스",
+      "aliases": []
+    },
+    {
+      "code": "267250",
+      "label": "HD현대",
+      "aliases": []
+    },
+    {
+      "code": "267260",
+      "label": "HD현대일렉트릭",
+      "aliases": []
+    },
+    {
+      "code": "267270",
+      "label": "HD건설기계",
+      "aliases": []
+    },
+    {
+      "code": "268280",
+      "label": "미원에스씨",
+      "aliases": []
+    },
+    {
+      "code": "271560",
+      "label": "오리온",
+      "aliases": []
+    },
+    {
+      "code": "272210",
+      "label": "한화시스템",
+      "aliases": []
+    },
+    {
+      "code": "277810",
+      "label": "레인보우로보틱스",
+      "aliases": []
+    },
+    {
+      "code": "278470",
+      "label": "에이피알",
+      "aliases": []
+    },
+    {
+      "code": "280360",
+      "label": "롯데웰푸드",
+      "aliases": []
+    },
+    {
+      "code": "281740",
+      "label": "레이크머티리얼즈",
+      "aliases": []
+    },
+    {
+      "code": "282330",
+      "label": "BGF리테일",
+      "aliases": []
+    },
+    {
+      "code": "285130",
+      "label": "SK케미칼",
+      "aliases": []
+    },
+    {
+      "code": "290650",
+      "label": "엘앤씨바이오",
+      "aliases": []
+    },
+    {
+      "code": "293490",
+      "label": "카카오게임즈",
+      "aliases": []
+    },
+    {
+      "code": "295310",
+      "label": "에이치브이엠",
+      "aliases": []
+    },
+    {
+      "code": "298020",
+      "label": "효성티앤씨",
+      "aliases": []
+    },
+    {
+      "code": "298040",
+      "label": "효성중공업",
+      "aliases": []
+    },
+    {
+      "code": "298050",
+      "label": "HS효성첨단소재",
+      "aliases": []
+    },
+    {
+      "code": "298380",
+      "label": "에이비엘바이오",
+      "aliases": []
+    },
+    {
+      "code": "300720",
+      "label": "한일시멘트",
+      "aliases": []
+    },
+    {
+      "code": "302440",
+      "label": "SK바이오사이언스",
+      "aliases": []
+    },
+    {
+      "code": "307950",
+      "label": "현대오토에버",
+      "aliases": []
+    },
+    {
+      "code": "310210",
+      "label": "보로노이",
+      "aliases": []
+    },
+    {
+      "code": "316140",
+      "label": "우리금융지주",
+      "aliases": []
+    },
+    {
+      "code": "319400",
+      "label": "현대무벡스",
+      "aliases": []
+    },
+    {
+      "code": "319660",
+      "label": "피에스케이",
+      "aliases": []
+    },
+    {
+      "code": "323280",
+      "label": "태성",
+      "aliases": []
+    },
+    {
+      "code": "323410",
+      "label": "카카오뱅크",
+      "aliases": []
+    },
+    {
+      "code": "326030",
+      "label": "SK바이오팜",
+      "aliases": []
+    },
+    {
+      "code": "328130",
+      "label": "루닛",
+      "aliases": []
+    },
+    {
+      "code": "329180",
+      "label": "HD현대중공업",
+      "aliases": []
+    },
+    {
+      "code": "347700",
+      "label": "스피어",
+      "aliases": []
+    },
+    {
+      "code": "347850",
+      "label": "디앤디파마텍",
+      "aliases": []
+    },
+    {
+      "code": "348370",
+      "label": "엔켐",
+      "aliases": []
+    },
+    {
+      "code": "352820",
+      "label": "하이브",
+      "aliases": []
+    },
+    {
+      "code": "356860",
+      "label": "티엘비",
+      "aliases": []
+    },
+    {
+      "code": "357780",
+      "label": "솔브레인",
+      "aliases": []
+    },
+    {
+      "code": "358570",
+      "label": "지아이이노베이션",
+      "aliases": []
+    },
+    {
+      "code": "361610",
+      "label": "SK아이이테크놀로지",
+      "aliases": []
+    },
+    {
+      "code": "373220",
+      "label": "LG에너지솔루션",
+      "aliases": []
+    },
+    {
+      "code": "375500",
+      "label": "DL이앤씨",
+      "aliases": []
+    },
+    {
+      "code": "376900",
+      "label": "로킷헬스케어",
+      "aliases": []
+    },
+    {
+      "code": "377300",
+      "label": "카카오페이",
+      "aliases": []
+    },
+    {
+      "code": "383220",
+      "label": "F&F",
+      "aliases": []
+    },
+    {
+      "code": "383310",
+      "label": "에코프로에이치엔",
+      "aliases": []
+    },
+    {
+      "code": "388210",
+      "label": "씨엠티엑스",
+      "aliases": []
+    },
+    {
+      "code": "388720",
+      "label": "유일로보틱스",
+      "aliases": []
+    },
+    {
+      "code": "397030",
+      "label": "에이프릴바이오",
+      "aliases": []
+    },
+    {
+      "code": "402340",
+      "label": "SK스퀘어",
+      "aliases": []
+    },
+    {
+      "code": "403870",
+      "label": "HPSP",
+      "aliases": []
+    },
+    {
+      "code": "417200",
+      "label": "LS머트리얼즈",
+      "aliases": []
+    },
+    {
+      "code": "420770",
+      "label": "기가비스",
+      "aliases": []
+    },
+    {
+      "code": "437730",
+      "label": "삼현",
+      "aliases": []
+    },
+    {
+      "code": "440110",
+      "label": "파두",
+      "aliases": []
+    },
+    {
+      "code": "443060",
+      "label": "HD현대마린솔루션",
+      "aliases": []
+    },
+    {
+      "code": "445680",
+      "label": "큐리옥스바이오시스템즈",
+      "aliases": []
+    },
+    {
+      "code": "450080",
+      "label": "에코프로머티",
+      "aliases": []
+    },
+    {
+      "code": "454910",
+      "label": "두산로보틱스",
+      "aliases": []
+    },
+    {
+      "code": "456040",
+      "label": "OCI",
+      "aliases": []
+    },
+    {
+      "code": "456160",
+      "label": "지투지바이오",
+      "aliases": []
+    },
+    {
+      "code": "457190",
+      "label": "이수스페셜티케미컬",
+      "aliases": []
+    },
+    {
+      "code": "458870",
+      "label": "씨어스",
+      "aliases": []
+    },
+    {
+      "code": "466100",
+      "label": "클로봇",
+      "aliases": []
+    },
+    {
+      "code": "475830",
+      "label": "오름테라퓨틱",
+      "aliases": []
+    },
+    {
+      "code": "476060",
+      "label": "온코닉테라퓨틱스",
+      "aliases": []
+    },
+    {
+      "code": "476830",
+      "label": "알지노믹스",
+      "aliases": []
+    },
+    {
+      "code": "483650",
+      "label": "달바글로벌",
+      "aliases": []
+    },
+    {
+      "code": "490470",
+      "label": "세미파이브",
+      "aliases": []
+    },
+    {
+      "code": "491000",
+      "label": "리브스메드",
+      "aliases": []
+    },
+    {
+      "code": "950160",
+      "label": "코오롱티슈진",
+      "aliases": []
+    }
+  ]
+}
