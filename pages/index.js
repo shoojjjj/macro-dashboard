@@ -261,10 +261,10 @@ const FLOW_LEGEND = [
 
 function FlowLegend() {
   return (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div className="flow-legend">
       {FLOW_LEGEND.map((item) => (
-        <span key={item.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9, color: '#94a3b8', lineHeight: 1 }}>
-          <span style={{ display: 'inline-block', width: 16, height: 3, borderRadius: 1, background: item.color, flexShrink: 0 }} />
+        <span key={item.label} className="flow-legend-item">
+          <span className="flow-legend-swatch" style={{ background: item.color }} />
           {item.label}
         </span>
       ))}
@@ -428,17 +428,17 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
 
   return (
     <div
-      className="ticker-card card"
+      className="ticker-card card flow-panel"
       onClick={() => window.open(chartUrl, '_blank', 'noopener,noreferrer')}
       style={{ cursor: 'pointer' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div className="flow-panel-head">
         <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{title} 수급</span>
-        <span style={{ fontSize: 9, color: '#475569', fontFamily: 'Pretendard' }}>
+        <span className="flow-panel-time">
           {latest?.time ? `${latest.time} 기준 · 누적` : '장중 데이터 대기'}
         </span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: history.length ? 10 : 0 }}>
+      <div className="flow-summary">
         {summary.map((r) => (
           <div key={r.label} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#64748b', marginBottom: 4 }}>{r.label}</div>
@@ -453,20 +453,10 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
         <>
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: 4,
-              padding: '6px 8px',
-              borderRadius: 8,
-              background: '#121a28',
-              border: '1px solid #1a2740',
-            }}
+            className="flow-toolbar"
           >
             <FlowLegend />
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+            <div className="flow-gran-btns">
               {granBtn('minute', '분')}
               {granBtn('hour', '시간')}
             </div>
@@ -480,7 +470,8 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
           <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>
             {granularity === 'hour' ? '시간별' : '분별'} 누적 (억)
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '42px 1fr 1fr 1fr', gap: '2px 6px', fontSize: 10, fontFamily: 'Pretendard' }}>
+          <div className="flow-table-wrap">
+          <div className="flow-table">
             <span style={{ color: '#475569' }}>시간</span>
             <span style={{ color: FLOW_COL.foreign, textAlign: 'right' }}>외국인</span>
             <span style={{ color: FLOW_COL.institution, textAlign: 'right' }}>기관</span>
@@ -493,6 +484,7 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
                 <span style={{ color: flowColor(row.individual), textAlign: 'right', fontWeight: 700 }}>{fmtFlow(row.individual)}</span>
               </Fragment>
             ))}
+          </div>
           </div>
         </>
       ) : null}
@@ -2024,7 +2016,7 @@ export default function Dashboard() {
           .ticker-board{grid-template-columns:repeat(4,1fr)}
           .event-calendar-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))!important}
         }
-        @media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)!important}.ticker-board{grid-template-columns:repeat(2,1fr)}.intra-grid{grid-template-columns:1fr!important}.grid2{grid-template-columns:1fr!important}.liq4{grid-template-columns:1fr!important}.heatmap-row{grid-template-columns:1fr!important}.news-grid{grid-template-columns:1fr!important}.event-calendar-grid{grid-template-columns:1fr!important}}
+        @media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)!important}.ticker-board{grid-template-columns:repeat(2,1fr)}.intra-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.grid2{grid-template-columns:1fr!important}.liq4{grid-template-columns:1fr!important}.heatmap-row{grid-template-columns:1fr!important}.news-grid{grid-template-columns:1fr!important}.event-calendar-grid{grid-template-columns:1fr!important}.flow-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.flow-panel{padding:8px 6px!important}.flow-legend{gap:6px}.flow-legend-item{font-size:8px}.flow-legend-swatch{width:12px;height:2px}.flow-toolbar{padding:5px 6px!important;gap:4px}.flow-panel-head{margin-bottom:6px}.flow-panel-time{font-size:8px}.flow-summary{gap:4px;margin-bottom:8px}.flow-table{font-size:9px;grid-template-columns:36px minmax(44px,1fr) minmax(44px,1fr) minmax(44px,1fr)}.flow-gran-btns button{padding:2px 6px!important;font-size:9px!important}.dash{padding:8px 8px 72px}}
         .dash{width:100%;max-width:1440px;margin:0 auto;padding:10px 14px 72px}
         .heatmap-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .news-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
@@ -2032,6 +2024,18 @@ export default function Dashboard() {
         .headline-card:hover{border-color:rgba(59,130,246,0.45)!important;transform:translateY(-1px)}
         .ticker-card{background:#0f1929;border:1px solid #243044;border-radius:8px;padding:7px 9px;transition:border-color .15s,transform .15s}
         .flow-chart-wrap{background:#121a28;border:1px solid #1a2740;border-radius:8px;padding:2px 0 0;overflow:hidden}
+        .flow-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:24px}
+        .flow-panel{min-width:0;padding:10px 12px!important}
+        .flow-panel-head{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:nowrap}
+        .flow-panel-time{font-size:9px;color:#475569;font-family:Pretendard;white-space:nowrap;flex-shrink:0}
+        .flow-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+        .flow-toolbar{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;padding:6px 8px;border-radius:8px;background:#121a28;border:1px solid #1a2740;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+        .flow-legend{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;flex-shrink:0}
+        .flow-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:9px;color:#94a3b8;line-height:1;white-space:nowrap}
+        .flow-legend-swatch{display:inline-block;width:16px;height:3px;border-radius:1px;flex-shrink:0}
+        .flow-gran-btns{display:flex;gap:4px;align-items:center;flex-shrink:0;margin-left:auto}
+        .flow-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+        .flow-table{display:grid;grid-template-columns:42px minmax(52px,1fr) minmax(52px,1fr) minmax(52px,1fr);gap:2px 6px;font-size:10px;font-family:Pretendard;min-width:100%}
         .ticker-card:hover{border-color:rgba(59,130,246,0.45);transform:translateY(-1px)}
         @media(max-width:1100px){.news-grid{grid-template-columns:repeat(3,1fr)}.heatmap-row{grid-template-columns:1fr}}
         @media(max-width:720px){.news-grid{grid-template-columns:repeat(2,1fr)}}
@@ -2059,7 +2063,7 @@ export default function Dashboard() {
         </div>
 
         <IntradayCluster stock={s} />
-        <div style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10, marginBottom:24}}>
+        <div className="flow-row">
           <InvestorFlowPanel
             title="코스피"
             flowData={s.investorFlow?.kospi}
