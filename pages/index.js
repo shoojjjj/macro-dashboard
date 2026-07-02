@@ -3,6 +3,24 @@ import { calculateQuantScore, buildReportData, fmtScore, EMPTY_METRICS, round3, 
 import { formatKstEventDate, formatKstEventDateShort, formatKstTime, importanceStars, todayKstDateStr, addDaysKst, groupEventsByDate, eventDedupeKey } from '../lib/eventTimeline';
 import { US_SECTORS, KR_SECTORS } from '../lib/sectorStocks';
 
+function useCompactMobile() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const apply = () => setCompact(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+  return compact;
+}
+
+function flowXLabelStep(count, compact, granularity) {
+  if (count <= 1) return 1;
+  if (granularity === 'hour') return compact ? 2 : 1;
+  return Math.max(1, Math.ceil(count / (compact ? 5 : 8)));
+}
+
 const LOCAL_WL_KEY = 'stock_dash_extra_watchlist';
 
 function readLocalWatchlist() {
@@ -299,12 +317,14 @@ function sliceFlowHistory(history, granularity) {
 
 function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
   const [granularity, setGranularity] = useState('minute');
+  const compact = useCompactMobile();
   const latest = flowData?.latest;
   const history = flowData?.history ?? [];
-  const displayHistory = useMemo(
-    () => sliceFlowHistory(history, granularity),
-    [history, granularity]
-  );
+  const displayHistory = useMemo(() => {
+    let rows = sliceFlowHistory(history, granularity);
+    if (compact && granularity === 'minute') rows = rows.slice(-24);
+    return rows;
+  }, [history, granularity, compact]);
   const recentRows = [...displayHistory].reverse().slice(0, 6);
   const chartRef = useRef(null);
 
@@ -328,11 +348,12 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
       const foreignData = displayHistory.map((r) => symlog(r.foreign));
       const institutionData = displayHistory.map((r) => symlog(r.institution));
       const individualData = displayHistory.map((r) => symlog(r.individual));
+      const labelStep = flowXLabelStep(categories.length, compact, granularity);
 
       const c = new ApexCharts(el, {
-        chart: { type: 'line', height: 178, toolbar: { show: false }, background: 'transparent', animations: { enabled: false } },
-        grid: { strokeDashArray: 3, borderColor: '#1e2d42', padding: { top: 6, bottom: 8, left: 4, right: 4 } },
-        stroke: { curve: 'smooth', width: 2.5 },
+        chart: { type: 'line', height: compact ? 152 : 178, toolbar: { show: false }, background: 'transparent', animations: { enabled: false } },
+        grid: { strokeDashArray: 3, borderColor: '#1e2d42', padding: { top: 4, bottom: compact ? 18 : 10, left: 2, right: 2 } },
+        stroke: { curve: 'smooth', width: compact ? 2 : 2.5 },
         colors: [FLOW_COL.foreign, FLOW_COL.institution, FLOW_COL.individual],
         series: [
           { name: '외국인', data: foreignData },
@@ -341,11 +362,23 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
         ],
         xaxis: {
           categories,
-          labels: { style: { colors: '#527193', fontFamily: 'Pretendard', fontSize: '8px' }, rotate: 0, hideOverlappingLabels: true },
-          tickAmount: granularity === 'minute' ? 8 : 6,
+          labels: {
+            style: { colors: '#527193', fontFamily: 'Pretendard', fontSize: compact ? '7px' : '8px' },
+            rotate: compact ? -40 : 0,
+            rotateAlways: compact,
+            hideOverlappingLabels: true,
+            trim: true,
+            formatter: (val, _ts, opts) => {
+              const i = opts?.i ?? categories.indexOf(val);
+              if (i < 0) return '';
+              if (i !== 0 && i !== categories.length - 1 && i % labelStep !== 0) return '';
+              return String(val).slice(0, 5);
+            },
+          },
+          tickAmount: compact ? 5 : (granularity === 'minute' ? 8 : 6),
           axisBorder: { show: false },
           axisTicks: { show: false },
-          title: { text: 'KST', style: { color: '#475569', fontSize: '8px' } },
+          title: { text: compact ? '' : 'KST', style: { color: '#475569', fontSize: '8px' } },
         },
         yaxis: [
           {
@@ -398,7 +431,7 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
       try { chartRef.current?.destroy(); } catch {}
       chartRef.current = null;
     };
-  }, [chartId, displayHistory, granularity]);
+  }, [chartId, displayHistory, granularity, compact]);
 
   const summary = [
     { label: '외국인', val: latest?.foreign },
@@ -440,12 +473,12 @@ function InvestorFlowPanel({ title, flowData, chartUrl, chartId }) {
       </div>
       <div className="flow-summary">
         {summary.map((r) => (
-          <div key={r.label} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: '#64748b', marginBottom: 4 }}>{r.label}</div>
-            <div style={{ fontSize: 13, fontWeight: 800, fontFamily: 'Pretendard', color: flowColor(r.val) }}>
+          <div key={r.label} className="flow-sum-cell">
+            <div className="flow-sum-label">{r.label}</div>
+            <div className="flow-sum-val" style={{ color: flowColor(r.val) }}>
               {fmtFlow(r.val)}
             </div>
-            <div style={{ fontSize: 8, color: '#475569' }}>억</div>
+            <div className="flow-sum-unit">억</div>
           </div>
         ))}
       </div>
@@ -524,8 +557,9 @@ function intraday0900MarkerPct(points) {
 
 function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, digits = 2, embedded = false, unified = false, isLast = false, showOpenMarker = true }) {
   const chartRef = useRef(null);
+  const compact = useCompactMobile();
   const markerPct = showOpenMarker ? intraday0900MarkerPct(points) : null;
-  const chartHeight = unified ? 138 : embedded ? 72 : 88;
+  const chartHeight = unified ? (compact ? 100 : 138) : embedded ? 72 : 88;
 
   useEffect(() => {
     if (!points?.length) return undefined;
@@ -567,21 +601,21 @@ function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, di
       try { chartRef.current?.destroy(); } catch {}
       chartRef.current = null;
     };
-  }, [id, points, chg, embedded, unified]);
+  }, [id, points, chg, embedded, unified, compact, chartHeight]);
 
   const inner = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: unified ? 3 : 4 }}>
+    <div className={`intra-inner${unified ? ' intra-inner-unified' : ''}${compact ? ' intra-inner-compact' : ''}`}>
       {unified ? (
         <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', lineHeight: 1.3 }}>{label}</span>
-            <span style={{ fontSize: 15, fontWeight: 900, color: '#fff', fontFamily: 'Pretendard', lineHeight: 1.2 }}>
+          <div className="intra-head-row">
+            <span className="intra-label">{label}</span>
+            <span className="intra-val">
               {val == null ? '--' : val.toLocaleString('ko-KR', { maximumFractionDigits: digits })}
             </span>
             <ChangeLabel value={chg} small={unified} />
           </div>
           {subLabel && (
-            <span style={{ fontSize: 8, color: '#475569', fontFamily: 'Pretendard', lineHeight: 1.2 }}>{subLabel}</span>
+            <span className="intra-sub">{subLabel}</span>
           )}
         </>
       ) : (
@@ -647,13 +681,9 @@ function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, di
   if (embedded && unified) {
     return (
       <div
+        className={`intra-unified-cell${isLast ? ' intra-unified-last' : ''}`}
         onClick={() => window.open(chartUrl, '_blank', 'noopener,noreferrer')}
-        style={{
-          cursor: 'pointer',
-          padding: '10px 14px 8px',
-          borderRight: unified && !isLast ? '1px solid #1a2740' : undefined,
-          minHeight: unified ? 176 : 132,
-        }}
+        style={{ cursor: 'pointer' }}
       >
         {inner}
       </div>
@@ -2016,7 +2046,7 @@ export default function Dashboard() {
           .ticker-board{grid-template-columns:repeat(4,1fr)}
           .event-calendar-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))!important}
         }
-        @media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)!important}.ticker-board{grid-template-columns:repeat(2,1fr)}.intra-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.grid2{grid-template-columns:1fr!important}.liq4{grid-template-columns:1fr!important}.heatmap-row{grid-template-columns:1fr!important}.news-grid{grid-template-columns:1fr!important}.event-calendar-grid{grid-template-columns:1fr!important}.flow-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.flow-panel{padding:8px 6px!important}.flow-legend{gap:6px}.flow-legend-item{font-size:8px}.flow-legend-swatch{width:12px;height:2px}.flow-toolbar{padding:5px 6px!important;gap:4px}.flow-panel-head{margin-bottom:6px}.flow-panel-time{font-size:8px}.flow-summary{gap:4px;margin-bottom:8px}.flow-table{font-size:9px;grid-template-columns:36px minmax(44px,1fr) minmax(44px,1fr) minmax(44px,1fr)}.flow-gran-btns button{padding:2px 6px!important;font-size:9px!important}.dash{padding:8px 8px 72px}}
+        @media(max-width:640px){.grid4{grid-template-columns:repeat(2,1fr)!important}.ticker-board{grid-template-columns:repeat(2,1fr)}.intra-grid{grid-template-columns:1fr!important}.grid2{grid-template-columns:1fr!important}.liq4{grid-template-columns:1fr!important}.heatmap-row{grid-template-columns:1fr!important}.news-grid{grid-template-columns:1fr!important}.event-calendar-grid{grid-template-columns:1fr!important}.flow-row{grid-template-columns:1fr!important;gap:8px}.flow-panel{padding:8px 10px!important}.flow-legend{gap:6px}.flow-legend-item{font-size:7px}.flow-legend-swatch{width:10px;height:2px}.flow-toolbar{padding:4px 6px!important;gap:4px}.flow-panel-head{margin-bottom:5px}.flow-panel-head>span:first-child{font-size:10px!important}.flow-panel-time{font-size:7px}.flow-summary{gap:4px;margin-bottom:6px}.flow-sum-label{font-size:7px!important;margin-bottom:2px!important}.flow-sum-val{font-size:11px!important}.flow-sum-unit{font-size:7px!important}.flow-table{font-size:8px;grid-template-columns:32px minmax(40px,1fr) minmax(40px,1fr) minmax(40px,1fr)}.flow-gran-btns button{padding:2px 5px!important;font-size:8px!important}.dash{padding:8px 8px 72px}.intra-unified-cell{border-right:none!important;border-bottom:1px solid #1a2740;padding:8px 10px 6px!important;min-height:0!important}.intra-unified-last{border-bottom:none!important}.intra-label{font-size:9px!important}.intra-val{font-size:13px!important}.intra-sub{font-size:7px!important}.intraday-cluster{padding:10px!important}}
         .dash{width:100%;max-width:1440px;margin:0 auto;padding:10px 14px 72px}
         .heatmap-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
         .news-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
@@ -2029,6 +2059,17 @@ export default function Dashboard() {
         .flow-panel-head{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:nowrap}
         .flow-panel-time{font-size:9px;color:#475569;font-family:Pretendard;white-space:nowrap;flex-shrink:0}
         .flow-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+        .flow-sum-cell{text-align:center}
+        .flow-sum-label{font-size:9px;color:#64748b;margin-bottom:4px}
+        .flow-sum-val{font-size:13px;font-weight:800;font-family:Pretendard}
+        .flow-sum-unit{font-size:8px;color:#475569}
+        .intra-unified-cell{padding:10px 14px 8px;border-right:1px solid #1a2740;min-height:176px;cursor:pointer}
+        .intra-inner{display:flex;flex-direction:column;gap:4px}
+        .intra-inner-unified{gap:3px}
+        .intra-head-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+        .intra-label{font-size:10px;font-weight:700;color:#94a3b8;line-height:1.3}
+        .intra-val{font-size:15px;font-weight:900;color:#fff;font-family:Pretendard;line-height:1.2}
+        .intra-sub{font-size:8px;color:#475569;font-family:Pretendard;line-height:1.2}
         .flow-toolbar{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;padding:6px 8px;border-radius:8px;background:#121a28;border:1px solid #1a2740;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
         .flow-legend{display:flex;gap:10px;align-items:center;flex-wrap:nowrap;flex-shrink:0}
         .flow-legend-item{display:inline-flex;align-items:center;gap:5px;font-size:9px;color:#94a3b8;line-height:1;white-space:nowrap}
