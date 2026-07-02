@@ -1128,7 +1128,7 @@ const EVENT_PERIOD_OPTIONS = [
   { days: 35, label: '한달' },
 ];
 
-const EVENT_VISIBLE_CAP = 3;
+const EVENT_VISIBLE_CAP = 5;
 
 function EventRow({ ev }) {
   const isMacro = ev.category === '매크로';
@@ -1261,11 +1261,12 @@ function EventTimelinePanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadEvents = useCallback(async (days) => {
+  const loadEvents = useCallback(async (days, refresh = false) => {
     setLoading(true);
     setError('');
     try {
-      const r = await fetch(`/api/events?days=${days}`);
+      const q = refresh ? `&refresh=1` : '';
+      const r = await fetch(`/api/events?days=${days}${q}`);
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || '일정 조회 실패');
       setEvents(d.events || []);
@@ -1309,7 +1310,7 @@ function EventTimelinePanel() {
             KST · {formatKstEventDate(rangeStart)} ~ {formatKstEventDate(rangeEnd)}
             {totalEvents > 0 && ` · ${totalEvents}건`}
           </span>
-          <button type="button" onClick={() => loadEvents(periodDays)} disabled={loading} style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: 6, padding: '3px 8px', fontSize: 9, cursor: loading ? 'wait' : 'pointer' }}>
+          <button type="button" onClick={() => loadEvents(periodDays, true)} disabled={loading} style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: 6, padding: '3px 8px', fontSize: 9, cursor: loading ? 'wait' : 'pointer' }}>
             {loading ? '…' : '새로고침'}
           </button>
         </div>

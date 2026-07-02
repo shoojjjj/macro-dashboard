@@ -8,10 +8,14 @@ import {
   filterEventsInRange,
 } from '../../lib/eventTimeline';
 
-const UA = { 'User-Agent': 'Mozilla/5.0' };
+const UA = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  Accept: 'application/json,text/plain,*/*',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
 const CACHE_TTL_MS = 30 * 60 * 1000;
-const YAHOO_TIMEOUT_MS = 4500;
-const YAHOO_POOL = 4;
+const YAHOO_TIMEOUT_MS = 7000;
+const YAHOO_POOL = 8;
 const EVENT_FETCH_DAYS = 45;
 const EVENT_VIEW_OPTIONS = [7, 14, 35];
 const EARNINGS_SCAN_US = [
@@ -75,6 +79,45 @@ function generateProvisionalEarningsEvents(start, endExclusive) {
   return PROVISIONAL_EARNINGS_SCHEDULE.filter(
     (e) => e.date >= start && e.date < endExclusive,
   );
+}
+
+/** Yahoo 장애 시 보강 — 관심종목·빅테크 (분기 실적 추정일) */
+const EARNINGS_FALLBACK = [
+  { date: '2026-07-22', timeKst: '06:00', label: 'TSLA', sym: 'TSLA' },
+  { date: '2026-07-23', timeKst: '06:00', label: 'GOOGL', sym: 'GOOGL' },
+  { date: '2026-07-29', timeKst: '06:00', label: 'MSFT', sym: 'MSFT' },
+  { date: '2026-07-29', timeKst: '06:00', label: 'META', sym: 'META' },
+  { date: '2026-07-29', timeKst: '06:00', label: 'QCOM', sym: 'QCOM' },
+  { date: '2026-07-29', timeKst: '15:00', label: '삼성전자', sym: '005930' },
+  { date: '2026-07-30', timeKst: '06:00', label: 'AAPL', sym: 'AAPL' },
+  { date: '2026-07-30', timeKst: '06:00', label: 'AMZN', sym: 'AMZN' },
+  { date: '2026-08-04', timeKst: '06:00', label: 'AMD', sym: 'AMD' },
+  { date: '2026-08-05', timeKst: '06:00', label: 'IONQ', sym: 'IONQ' },
+  { date: '2026-08-26', timeKst: '06:00', label: 'NVDA', sym: 'NVDA' },
+  { date: '2026-08-27', timeKst: '06:00', label: 'MRVL', sym: 'MRVL' },
+  { date: '2026-08-12', timeKst: '06:00', label: 'LITE', sym: 'LITE' },
+  { date: '2026-08-24', timeKst: '06:00', label: 'SNDK', sym: 'SNDK' },
+  { date: '2026-07-29', timeKst: '06:00', label: '두산에너빌리티', sym: '034020' },
+];
+
+function generateFallbackEarningsEvents(start, endExclusive) {
+  const wlUs = new Set(getMergedWatchlistUS().map((x) => x.sym));
+  const wlKr = new Set(getMergedWatchlistKR().map((x) => x.code));
+  return EARNINGS_FALLBACK
+    .filter((row) => row.date >= start && row.date < endExclusive)
+    .filter((row) => {
+      if (row.sym.length === 6) return wlKr.has(row.sym) || EARNINGS_SCAN_KR.some((x) => x.code === row.sym);
+      return wlUs.has(row.sym) || EARNINGS_SCAN_US.includes(row.sym);
+    })
+    .map((row) => ({
+      date: row.date,
+      timeKst: row.timeKst,
+      title: `${row.label}(${row.sym}) 실적`,
+      category: '기업실적',
+      importance: 3,
+      note: row.sym.length === 6 ? '분기 실적(추정) · Yahoo 보강' : '장 마감 후(AMC) · Yahoo 보강',
+      source: 'fallback',
+    }));
 }
 const FOMC_DECISIONS = [
   { date: '2025-01-29', span: '1/28-29' },
@@ -158,10 +201,27 @@ async function mapPool(items, limit, fn) {
 async function yahooAuth() {
   const r1 = await fetch('https://fc.yahoo.com', { headers: UA, redirect: 'manual' });
   const cookie = (r1.headers.get('set-cookie') || '').split(';')[0];
-  const crumb = await (await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+  if (!cookie) throw new Error('yahoo cookie missing');
+  const r2 = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
     headers: { ...UA, Cookie: cookie },
-  })).text();
+  });
+  if (!r2.ok) throw new Error(`yahoo crumb ${r2.status}`);
+  const crumb = await r2.text();
+  if (!crumb || crumb.includes('Invalid')) throw new Error('yahoo crumb invalid');
   return { cookie, crumb };
+}
+
+async function yahooAuthWithRetry(maxAttempts = 3) {
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await withTimeout(yahooAuth(), 8000);
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
+  }
+  throw lastErr || new Error('yahoo auth failed');
 }
 
 function collectYahooEarningDates(earn) {
@@ -444,25 +504,36 @@ async function fetchForexFactoryMacro(start, endExclusive) {
   }
 }
 
-async function fetchAllEarnings(start, endExclusive) {
-  let auth;
-  try {
-    auth = await withTimeout(yahooAuth(), 5000);
-  } catch {
-    return [];
-  }
-
+function buildEarningsJobs() {
   const krTargets = mergeKrScanTargets();
   const wlUs = getMergedWatchlistUS();
   const labelBySym = Object.fromEntries(wlUs.map((x) => [x.sym, x.label]));
   const usSyms = [...new Set([...EARNINGS_SCAN_US, ...wlUs.map((x) => x.sym)])];
 
   const jobs = [
-    ...usSyms.map((sym) => ({ sym, label: labelBySym[sym] || sym, market: 'us' })),
-    ...krTargets.map((x) => ({ sym: `${x.code}.KS`, label: x.label, market: 'kr' })),
-    ...krTargets.filter((x) => x.adr).map((x) => ({ sym: x.adr, label: x.label, market: 'us' })),
+    ...usSyms.map((sym) => ({ sym, label: labelBySym[sym] || sym, market: 'us', priority: 1 })),
+    ...krTargets.map((x) => ({ sym: `${x.code}.KS`, label: x.label, market: 'kr', priority: 1 })),
+    ...krTargets.filter((x) => x.adr).map((x) => ({ sym: x.adr, label: x.label, market: 'us', priority: 0 })),
   ];
 
+  const seen = new Set();
+  return jobs.filter((job) => {
+    const key = `${job.market}|${job.sym}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => b.priority - a.priority);
+}
+
+async function fetchAllEarnings(start, endExclusive) {
+  let auth;
+  try {
+    auth = await yahooAuthWithRetry();
+  } catch {
+    return [];
+  }
+
+  const jobs = buildEarningsJobs();
   const rows = await mapPool(jobs, YAHOO_POOL, (job) =>
     fetchYahooEarnings(job.sym, job.label, job.market, auth, start, endExclusive));
 
@@ -480,7 +551,7 @@ async function buildEventsPayload() {
   const start = todayKstDateStr();
   const endExclusive = addDaysKst(start, EVENT_FETCH_DAYS);
 
-  const [fred, ff, recurring, fomc, earnings, krDisclosures, provisional] = await Promise.all([
+  const [fred, ff, recurring, fomc, earnings, krDisclosures, provisional, fallbackEarn] = await Promise.all([
     fetchFredMacro(start, endExclusive),
     fetchForexFactoryMacro(start, endExclusive),
     Promise.resolve(generateRecurringMacro(start, endExclusive)),
@@ -488,18 +559,21 @@ async function buildEventsPayload() {
     fetchAllEarnings(start, endExclusive),
     fetchAllKrDisclosures(start, endExclusive),
     Promise.resolve(generateProvisionalEarningsEvents(start, endExclusive)),
+    Promise.resolve(generateFallbackEarningsEvents(start, endExclusive)),
   ]);
+
+  const mergedEarnings = [...earnings, ...fallbackEarn];
 
   const events = sortEvents(
     dedupeEvents(
-      filterEventsInRange([...fred, ...ff, ...recurring, ...fomc, ...earnings, ...krDisclosures, ...provisional], start, endExclusive),
+      filterEventsInRange([...fred, ...ff, ...recurring, ...fomc, ...mergedEarnings, ...krDisclosures, ...provisional], start, endExclusive),
     ),
   );
 
   return {
     events,
     range: { start, end: addDaysKst(start, EVENT_FETCH_DAYS - 1), days: EVENT_FETCH_DAYS },
-    sources: ['FRED', 'Fed FOMC', 'Forex Factory', 'Yahoo Finance', 'Naver 공시', '잠정실적 일정'],
+    sources: ['FRED', 'Fed FOMC', 'Forex Factory', 'Yahoo Finance', 'Naver 공시', '잠정실적 일정', '실적 일정 보강'],
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -521,21 +595,34 @@ function filterEventsByViewDays(payload, viewDays) {
   };
 }
 
+function cacheHasEarnings(payload) {
+  const earnings = (payload?.events || []).filter((e) => e.category === '기업실적');
+  return earnings.some((e) => e.source === 'yahoo') || earnings.length >= 5;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'GET only' });
   }
 
   const viewDays = parseViewDays(req.query.days);
+  const forceRefresh = req.query.refresh === '1';
 
-  if (cache.payload && Date.now() - cache.at < CACHE_TTL_MS) {
+  if (
+    !forceRefresh
+    && cache.payload
+    && Date.now() - cache.at < CACHE_TTL_MS
+    && cacheHasEarnings(cache.payload)
+  ) {
     return res.status(200).json({ ...filterEventsByViewDays(cache.payload, viewDays), cached: true });
   }
 
   try {
     const payload = await buildEventsPayload();
-    cache = { at: Date.now(), payload };
-    return res.status(200).json(filterEventsByViewDays(payload, viewDays));
+    if (cacheHasEarnings(payload) || !cache.payload || forceRefresh) {
+      cache = { at: Date.now(), payload };
+    }
+    return res.status(200).json({ ...filterEventsByViewDays(payload, viewDays), cached: false });
   } catch (e) {
     return res.status(500).json({ error: e.message || '일정 조회 실패' });
   }
