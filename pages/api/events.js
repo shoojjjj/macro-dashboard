@@ -49,7 +49,33 @@ const FRED_MACRO = [
   { id: 21, title: '미 소매판매', importance: 2, timeKst: '21:30', note: 'Census · 소비 동향' },
 ];
 
-/** Fed FOMC 성명일(미 동부, 14:00 ET ≈ 익일 03:00 KST) — FRED 101은 일별 보도자료라 제외 */
+/** 잠정 실적발표 일정 — IR·언론 확정 전 수동 보강 */
+const PROVISIONAL_EARNINGS_SCHEDULE = [
+  {
+    date: '2026-07-07',
+    timeKst: '08:00',
+    title: '삼성전자 잠정실적',
+    category: '기업실적',
+    importance: 3,
+    note: '2026 2Q 연결 잠정실적 · 7/7~8 IR 공시 예정',
+    source: 'manual',
+  },
+  {
+    date: '2026-07-28',
+    timeKst: '08:00',
+    title: 'SK하이닉스 잠정실적',
+    category: '기업실적',
+    importance: 3,
+    note: '2026 2Q 연결 실적 · 7월 하순 발표 예정',
+    source: 'manual',
+  },
+];
+
+function generateProvisionalEarningsEvents(start, endExclusive) {
+  return PROVISIONAL_EARNINGS_SCHEDULE.filter(
+    (e) => e.date >= start && e.date < endExclusive,
+  );
+}
 const FOMC_DECISIONS = [
   { date: '2025-01-29', span: '1/28-29' },
   { date: '2025-03-19', span: '3/18-19', sep: true },
@@ -454,25 +480,26 @@ async function buildEventsPayload() {
   const start = todayKstDateStr();
   const endExclusive = addDaysKst(start, EVENT_FETCH_DAYS);
 
-  const [fred, ff, recurring, fomc, earnings, krDisclosures] = await Promise.all([
+  const [fred, ff, recurring, fomc, earnings, krDisclosures, provisional] = await Promise.all([
     fetchFredMacro(start, endExclusive),
     fetchForexFactoryMacro(start, endExclusive),
     Promise.resolve(generateRecurringMacro(start, endExclusive)),
     Promise.resolve(generateFomcEvents(start, endExclusive)),
     fetchAllEarnings(start, endExclusive),
     fetchAllKrDisclosures(start, endExclusive),
+    Promise.resolve(generateProvisionalEarningsEvents(start, endExclusive)),
   ]);
 
   const events = sortEvents(
     dedupeEvents(
-      filterEventsInRange([...fred, ...ff, ...recurring, ...fomc, ...earnings, ...krDisclosures], start, endExclusive),
+      filterEventsInRange([...fred, ...ff, ...recurring, ...fomc, ...earnings, ...krDisclosures, ...provisional], start, endExclusive),
     ),
   );
 
   return {
     events,
     range: { start, end: addDaysKst(start, EVENT_FETCH_DAYS - 1), days: EVENT_FETCH_DAYS },
-    sources: ['FRED', 'Fed FOMC', 'Forex Factory', 'Yahoo Finance', 'Naver 공시'],
+    sources: ['FRED', 'Fed FOMC', 'Forex Factory', 'Yahoo Finance', 'Naver 공시', '잠정실적 일정'],
     fetchedAt: new Date().toISOString(),
   };
 }

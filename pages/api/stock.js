@@ -79,6 +79,19 @@ function filterIntradayKstToday(points) {
   return filtered.length >= 2 ? filtered : (points || []);
 }
 
+function kstTimeUnix(dateKey, hour, minute = 0) {
+  const hh = String(hour).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+  return Math.floor(new Date(`${dateKey}T${hh}:${mm}:00+09:00`).getTime() / 1000);
+}
+
+function filterIntradayFromKstTime(points, hour, minute = 0) {
+  const today = todayKstDateStrStock();
+  const cutoff = kstTimeUnix(today, hour, minute);
+  const filtered = (points || []).filter((p) => p.t >= cutoff);
+  return filtered.length >= 2 ? filtered : (points || []);
+}
+
 async function fetchYahooIntraday(symbol, { kstTodayOnly = false } = {}) {
   try {
     // 반드시 raw 심볼(^KS11, NQ=F) — %5EKS11처럼 pre-encode하면 이중 인코딩되어 빈 배열
@@ -584,7 +597,7 @@ export default async function handler(req, res) {
       fetchInvestorFlowData('02'),
       fetchYahooIntraday('^KS11', { kstTodayOnly: true }),
       fetchYahooIntraday('^KQ11', { kstTodayOnly: true }),
-      fetchYahooIntraday('NQ=F'),
+      fetchYahooIntraday('NQ=F').then((pts) => filterIntradayFromKstTime(pts, 5)),
     ]);
 
     const g = (sym) => usMap[sym] ?? { price: null, chg: null };

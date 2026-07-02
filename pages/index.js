@@ -533,7 +533,7 @@ function intraday0900MarkerPct(points) {
 function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, digits = 2, embedded = false, unified = false, isLast = false, showOpenMarker = true }) {
   const chartRef = useRef(null);
   const markerPct = showOpenMarker ? intraday0900MarkerPct(points) : null;
-  const chartHeight = unified ? 118 : embedded ? 72 : 88;
+  const chartHeight = unified ? 138 : embedded ? 72 : 88;
 
   useEffect(() => {
     if (!points?.length) return undefined;
@@ -578,19 +578,36 @@ function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, di
   }, [id, points, chg, embedded, unified]);
 
   const inner = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: unified ? 4 : 4 }}>
-      <div>
-        <span style={{ fontSize: unified ? 10 : embedded ? 10 : 11, fontWeight: 700, color: '#94a3b8', lineHeight: 1.3 }}>{label}</span>
-        {subLabel && (
-          <span style={{ display: 'block', fontSize: 8, color: '#475569', marginTop: 2, fontFamily: 'Pretendard' }}>{subLabel}</span>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: unified ? 2 : 2 }}>
-        <span style={{ fontSize: unified ? 15 : 15, fontWeight: 900, color: '#fff', fontFamily: 'Pretendard', lineHeight: 1.2 }}>
-          {val == null ? '--' : val.toLocaleString('ko-KR', { maximumFractionDigits: digits })}
-        </span>
-        <ChangeLabel value={chg} small={unified} />
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: unified ? 3 : 4 }}>
+      {unified ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', lineHeight: 1.3 }}>{label}</span>
+            <span style={{ fontSize: 15, fontWeight: 900, color: '#fff', fontFamily: 'Pretendard', lineHeight: 1.2 }}>
+              {val == null ? '--' : val.toLocaleString('ko-KR', { maximumFractionDigits: digits })}
+            </span>
+            <ChangeLabel value={chg} small={unified} />
+          </div>
+          {subLabel && (
+            <span style={{ fontSize: 8, color: '#475569', fontFamily: 'Pretendard', lineHeight: 1.2 }}>{subLabel}</span>
+          )}
+        </>
+      ) : (
+        <>
+          <div>
+            <span style={{ fontSize: embedded ? 10 : 11, fontWeight: 700, color: '#94a3b8', lineHeight: 1.3 }}>{label}</span>
+            {subLabel && (
+              <span style={{ display: 'block', fontSize: 8, color: '#475569', marginTop: 2, fontFamily: 'Pretendard' }}>{subLabel}</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+            <span style={{ fontSize: 15, fontWeight: 900, color: '#fff', fontFamily: 'Pretendard', lineHeight: 1.2 }}>
+              {val == null ? '--' : val.toLocaleString('ko-KR', { maximumFractionDigits: digits })}
+            </span>
+            <ChangeLabel value={chg} small={unified} />
+          </div>
+        </>
+      )}
       {points?.length ? (
         <div style={{ position: 'relative', marginTop: unified ? 0 : 2 }}>
           <div id={id} />
@@ -641,9 +658,9 @@ function MiniIntradayChart({ id, label, subLabel, val, points, chg, chartUrl, di
         onClick={() => window.open(chartUrl, '_blank', 'noopener,noreferrer')}
         style={{
           cursor: 'pointer',
-          padding: '12px 14px 10px',
+          padding: '10px 14px 8px',
           borderRight: unified && !isLast ? '1px solid #1a2740' : undefined,
-          minHeight: unified ? 168 : 132,
+          minHeight: unified ? 176 : 132,
         }}
       >
         {inner}
@@ -700,7 +717,7 @@ function IntradayCluster({ stock: s }) {
     {
       id: 'chart-nq-fut-intra',
       label: '나스닥100 선물',
-      subLabel: '24h · 2분봉 · KST 09:00 · Yahoo NQ=F',
+      subLabel: '24h · 2분봉 · KST 05:00~ · Yahoo NQ=F',
       val: s.nasdaqFut,
       points: s.intraday?.nasdaqFut,
       chg: s.nasdaqFutChg,
@@ -1969,43 +1986,11 @@ export default function Dashboard() {
 
   const marketTickers = [
     { label:'나스닥100 (QQQ)', val:s.nasdaq, chg:s.nasdaqChg, chartUrl: CHART.yahoo('QQQ') },
-    { label:'나스닥100 선물', val:s.nasdaqFut, chg:s.nasdaqFutChg, chartUrl: CHART.yahoo('NQ=F') },
     { label:'S&P 500 (SPY)', val:s.sp500, chg:s.sp500Chg, chartUrl: CHART.yahoo('SPY') },
-    { label:'S&P 500 선물', val:s.sp500Fut, chg:s.sp500FutChg, chartUrl: CHART.yahoo('ES=F') },
     { label:'필라델피아 반도체', val:s.sox, chg:s.soxChg, chartUrl: CHART.yahoo('SOXX') },
-    { label:'삼성전자', val:s.samsung, chg:s.samsungChg, digits:0, krw:true, chartUrl: CHART.naverStock('005930') },
-    { label:'SK하이닉스', val:s.hynix, chg:s.hynixChg, digits:0, krw:true, chartUrl: CHART.naverStock('000660') },
     { label:'CBOE VIX (공포지수)', val:s.vix, chg:s.vixChg, digits:2, prefix:'', labelColor:'#fb923c', chartUrl: CHART.yahoo('%5EVIX') },
     { label:'국제유가 WTI', val:s.wti, chg:s.wtiChg, digits:2, prefix:'$', labelColor:'#f59e0b', chartUrl: CHART.yahoo('CL=F') },
     { label:'원/달러 환율', val:s.usdkrw, chg:s.usdkrwChg, digits:1, prefix:'₩', labelColor:'#2dd4bf', chartUrl: CHART.naverFx() },
-    {
-      label: 'KOSPI200 주간선물',
-      val: s.kospiDay,
-      chg: s.kospiDayChg,
-      digits: 2,
-      hint: s.kospiDayLabel,
-      sourceLabel: s.kospiDaySession === 'day' ? '네이버 주간선물' : null,
-      chartUrl: CHART.naverNightFut(),
-    },
-    {
-      label: 'KOSPI200 야간선물',
-      val: s.kospiNight,
-      chg: s.kospiNightChg,
-      digits: 2,
-      hint: s.kospiNightLabel,
-      sourceLabel: s.kospiNightSession === 'night'
-        ? (s.kospiNightSource?.includes('k2fa')
-          ? 'K2FA001.N'
-          : s.kospiNightSource?.includes('tradingview')
-            ? 'TradingView K2I1!'
-            : '네이버 야간')
-        : s.kospiNightSession === 'tv-closed'
-          ? 'TradingView K2I1! · 야간 휴장'
-          : s.kospiNightSession === 'day-fallback'
-            ? '야간 휴장 · 주간 선물'
-            : null,
-      chartUrl: CHART.naverNightFut(),
-    },
   ];
 
   // 트리맵용 데이터 가공
@@ -2031,7 +2016,7 @@ export default function Dashboard() {
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .apexcharts-tooltip{background:#111e31!important;border:1px solid #1e3656!important;color:#fff!important}
         .grid4{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-        .ticker-board{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+        .ticker-board{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px}
         .intraday-cluster{margin-bottom:10px}
         @media(max-width:1100px){
           .grid4{grid-template-columns:repeat(4,1fr)!important}
@@ -2072,16 +2057,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* 마켓 티커 */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <h2 style={{fontSize:11,fontWeight:700,color:'#64748b',letterSpacing:'0.1em',textTransform:'uppercase',margin:0}}>🌐 LIVE MARKET TICKER</h2>
-          <span style={{fontSize:10,color:'#475569',fontFamily:'Pretendard'}}>클릭 → 차트 · 미국: Yahoo · 한국: 네이버</span>
-        </div>
-        <div className="ticker-board">
-          {marketTickers.map((item, i) => (
-            <TickerCard key={i} item={item} />
-          ))}
-        </div>
         <IntradayCluster stock={s} />
         <div style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10, marginBottom:24}}>
           <InvestorFlowPanel
@@ -2165,6 +2140,17 @@ export default function Dashboard() {
           watchlistUs={quantWatchlistUs}
           onWatchlistChange={handleWatchlistChange}
         />
+
+        {/* LIVE MARKET TICKER — 실시간 헤드라인 바로 위 */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,marginTop:8}}>
+          <h2 style={{fontSize:11,fontWeight:700,color:'#64748b',letterSpacing:'0.1em',textTransform:'uppercase',margin:0}}>🌐 LIVE MARKET TICKER</h2>
+          <span style={{fontSize:10,color:'#475569',fontFamily:'Pretendard'}}>클릭 → 차트 · 미국: Yahoo · 한국: 네이버</span>
+        </div>
+        <div className="ticker-board">
+          {marketTickers.map((item, i) => (
+            <TickerCard key={i} item={item} />
+          ))}
+        </div>
 
         {/* 브리핑 — 분야별 실시간 헤드라인 (주식 우선) */}
         <div style={{background:'linear-gradient(135deg,#0b1b32,#081220)',border:'1px solid rgba(37,99,235,0.2)',borderRadius:16,padding:20,marginBottom:24}}>
